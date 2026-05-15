@@ -399,12 +399,34 @@ const outcome=(a,b)=>a>b?'A':a<b?'B':'N';
 function isMatchLocked(m){
   if(m.scoreA!==null)return true;
   if(!m.date||!m.time)return false;
-  try{const[h,mn]=m.time.split(':').map(Number);const ko=new Date(m.date+'T'+String(h).padStart(2,'0')+':'+String(mn).padStart(2,'0')+':00');return(ko-new Date())<3600000;}catch{return false;}
+  try{
+    // Les horaires sont en heure de Paris — construire la date en UTC
+    const[h,mn]=m.time.split(':').map(Number);
+    // Utiliser toLocaleString pour convertir Paris -> UTC
+    const parisStr=`${m.date}T${String(h).padStart(2,'0')}:${String(mn).padStart(2,'0')}:00`;
+    // Créer la date comme heure locale Paris via Intl
+    const koLocal=new Date(parisStr); // interprétée en heure locale du navigateur
+    // Ajuster si le navigateur n'est pas à Paris
+    const nowParis=new Date(new Date().toLocaleString('en-US',{timeZone:'Europe/Paris'}));
+    const nowLocal=new Date();
+    const offset=nowLocal-nowParis; // différence entre local et Paris
+    const koParis=new Date(koLocal.getTime()+offset);
+    return(koParis-nowLocal)<3600000;
+  }catch{return false;}
 }
 function isMatchPast(m){
   if(m.scoreA!==null)return true;
   if(!m.date||!m.time)return false;
-  try{const[h,mn]=m.time.split(':').map(Number);const ko=new Date(m.date+'T'+String(h).padStart(2,'0')+':'+String(mn).padStart(2,'0')+':00');return new Date()>ko;}catch{return false;}
+  try{
+    const[h,mn]=m.time.split(':').map(Number);
+    const parisStr=`${m.date}T${String(h).padStart(2,'0')}:${String(mn).padStart(2,'0')}:00`;
+    const koLocal=new Date(parisStr);
+    const nowParis=new Date(new Date().toLocaleString('en-US',{timeZone:'Europe/Paris'}));
+    const nowLocal=new Date();
+    const offset=nowLocal-nowParis;
+    const koParis=new Date(koLocal.getTime()+offset);
+    return nowLocal>koParis;
+  }catch{return false;}
 }
 function koFinalScore(r){
   if(r.scoreAET!=null&&r.scoreBET!=null)return{a:r.scoreAET,b:r.scoreBET};
@@ -468,10 +490,33 @@ function buildRanking(state,gid,allM,restrict){
   if(gid==='all'&&restrict&&restrict.length)players=state.players.filter(p=>p.groupIds.some(g=>restrict.includes(g)));
   else if(gid==='all')players=state.players;
   else players=state.players.filter(p=>p.groupIds.includes(gid));
+  // Calculer les résultats du tournoi pour les bonus équipe favorite
+  let champTeam=null,finalistTeam=null,thirdTeam=null;
+  try{
+    const ko=buildKO(state);
+    const fin=ko.rounds[5]?.[0]; // finale
+    const third=ko.rounds[4]?.[0]; // petite finale
+    if(fin&&fin.scoreA!==null){
+      champTeam=winner(fin.teamA,fin.teamB,'final',0,state.knockout);
+      finalistTeam=champTeam===fin.teamA?fin.teamB:fin.teamA;
+    }
+    if(third&&third.scoreA!==null){
+      thirdTeam=winner(third.teamA,third.teamB,'third',0,state.knockout);
+    }
+  }catch(e){}
+
   return players.map(p=>{
     let pts=0,exact=0,good=0,played=0;
-    allM.forEach(m=>{const v=calcPoints(m,state.predictions[m.id]?.[p.id]);if(v!==null){pts+=v;played++;if(v===3)exact++;if(v===1)good++;}});
-    return{...p,pts,exact,good,played,favoriteTeam:p.favoriteTeam||null};
+    allM.forEach(m=>{const v=calcPoints(m,state.predictions[m.id]?.[p.id]);if(v!==null){pts+=v;played++;if(v>=3)exact++;else if(v>=1)good++;}});
+    // Bonus équipe favorite
+    let favBonus=0;
+    if(p.favoriteTeam){
+      if(champTeam&&p.favoriteTeam===champTeam)favBonus=10;
+      else if(finalistTeam&&p.favoriteTeam===finalistTeam)favBonus=7;
+      else if(thirdTeam&&p.favoriteTeam===thirdTeam)favBonus=5;
+    }
+    pts+=favBonus;
+    return{...p,pts,exact,good,played,favoriteTeam:p.favoriteTeam||null,favBonus};
   }).sort((a,b)=>b.pts-a.pts||b.exact-a.exact||a.name.localeCompare(b.name));
 }
 const groupBadges=(p,groups)=>p.groupIds.filter(gid=>gid!=='matchunique').map(gid=>{const g=groups.find(x=>x.id===gid);return g?`<span class="badge paid">${esc(g.name)}${g.paid?' 💰':''}</span>`:''}).join('');
@@ -672,7 +717,8 @@ function renderLeaderboard(state,containerId,groupFilterId,restrict,isPlayer){
   el.innerHTML=`<table><thead><tr><th>#</th><th>Joueur</th><th>Pts</th><th>Exact</th><th>Bon</th><th>Joués</th>${isPlayer?'<th></th>':''}</tr></thead><tbody>${
     rows.map((p,i)=>{
     const fav=p.favoriteTeam&&TEAMS[p.favoriteTeam]?`<img src="https://flagcdn.com/w40/${TEAMS[p.favoriteTeam][1]}.png" title="${esc(TEAMS[p.favoriteTeam][0])}" style="width:18px;height:13px;object-fit:cover;border-radius:2px;vertical-align:middle;margin-left:4px" loading="lazy" onerror="this.style.display='none'">`:'';
-    return`<tr><td>${medal(i)}</td><td><b>${esc(p.name)}</b>${fav}</td><td><b>${p.pts}</b></td><td>${p.exact}</td><td>${p.good}</td><td>${p.played}</td>${isPlayer?`<td><button class="small" style="padding:3px 8px;font-size:11px" type="button" data-action="view-pronos" data-pid="${p.id}">📋</button></td>`:''}</tr>`;
+    const favBonusBadge=p.favBonus?`<span style="font-size:10px;background:rgba(245,200,66,.2);color:#f5d442;padding:1px 5px;border-radius:999px;margin-left:4px">+${p.favBonus}🏆</span>`:'';
+    return`<tr><td>${medal(i)}</td><td><b>${esc(p.name)}</b>${fav}${favBonusBadge}</td><td><b>${p.pts}</b></td><td>${p.exact}</td><td>${p.good}</td><td>${p.played}</td>${isPlayer?`<td><button class="small" style="padding:3px 8px;font-size:11px" type="button" data-action="view-pronos" data-pid="${p.id}">📋</button></td>`:''}</tr>`;
   }).join('')
   }</tbody></table>${isPlayer?`<div id="pronos-detail"></div>`:''}`;
 }
@@ -1074,7 +1120,8 @@ function renderSpecialMatch(state){
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
           <div><label>Date du match</label><input id="smDate" type="date"></div>
-          <div><label>Heure du coup d'envoi</label><input id="smTime" type="time" placeholder="Ex: 21:00"></div>
+          <div><label>Heure du coup d'envoi</label>
+          <select id="smTime" style="width:100%"></select></div>
         </div>
         <label style="display:flex;align-items:center;gap:8px;margin:10px 0;cursor:pointer">
           <input type="checkbox" id="smCanET" style="width:auto;accent-color:var(--green)">
@@ -1082,6 +1129,30 @@ function renderSpecialMatch(state){
         </label>
         <div class="actions"><button class="primary" type="button" data-action="create-special-match">Créer le match</button></div>
       </div>`;
+      // Remplir les créneaux horaires disponibles (futur seulement, heure Paris)
+      function populateTimes(){
+        const dateVal=$('smDate')?.value;
+        const sel=$('smTime');if(!sel)return;
+        const now=new Date(new Date().toLocaleString('en-US',{timeZone:'Europe/Paris'}));
+        const today=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        const slots=[];
+        for(let h=0;h<24;h++){for(let m=0;m<60;m+=15){
+          const ts=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+          if(dateVal>today)slots.push(ts);
+          else if(dateVal===today){
+            const slotDate=new Date(`${dateVal}T${ts}:00`);
+            const nowLocal=new Date();
+            const offset=nowLocal-now;
+            if(slotDate.getTime()+offset>nowLocal.getTime()+3600000)slots.push(ts);
+          }
+        }}
+        sel.innerHTML=slots.length?slots.map(s=>`<option value="${s}">${s}</option>`).join(''):'<option value="">Aucun créneau disponible</option>';
+      }
+      // Init date min = aujourd'hui Paris
+      const nowP=new Date(new Date().toLocaleString('en-US',{timeZone:'Europe/Paris'}));
+      const todayP=`${nowP.getFullYear()}-${String(nowP.getMonth()+1).padStart(2,'0')}-${String(nowP.getDate()).padStart(2,'0')}`;
+      if($('smDate')){$('smDate').min=todayP;$('smDate').value=todayP;populateTimes();}
+      $('smDate')?.addEventListener('change',populateTimes);
       return;
     }
 
