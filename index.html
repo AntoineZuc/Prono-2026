@@ -4212,6 +4212,11 @@ function togglePwd(id){
   const btn=i.parentNode&&i.parentNode.querySelector('.pwd-eye');
   if(btn)btn.textContent=i.type==='password'?'👁':'🙈';
 }
+window.addEventListener('pageshow', function(e){
+  if (e.persisted) {
+    location.reload();
+  }
+});
 </script>
 </body>
 </html>
