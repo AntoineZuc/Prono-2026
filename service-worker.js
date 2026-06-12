@@ -2,7 +2,7 @@
 // et un fonctionnement basique hors-ligne. Ne touche jamais à Firebase
 // (les requêtes vers firebaseio.com ne sont jamais mises en cache).
 
-const CACHE_NAME = 'pronos-cdm-2026-v1';
+const CACHE_NAME = 'pronos-cdm-2026-v3';
 const APP_SHELL = [
   './',
   './index.html',
