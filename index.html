@@ -4398,7 +4398,7 @@ if ('serviceWorker' in navigator) {
      CHAT FLOTTANT PAR GROUPE
      ══════════════════════════════════════════════ -->
 <style>
-#chat-bubble{position:fixed;bottom:18px;right:18px;z-index:9999;display:none;flex-direction:column;align-items:flex-end;gap:10px;pointer-events:none;}
+#chat-bubble{position:fixed;bottom:72px;right:18px;z-index:9999;display:none;flex-direction:column;align-items:flex-end;gap:10px;pointer-events:none;}
 #chat-bubble *{pointer-events:auto;}
 #chat-btn{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#14c47d,#0a9d65);border:none;cursor:pointer;box-shadow:0 4px 16px rgba(20,196,125,.45);display:flex;align-items:center;justify-content:center;font-size:22px;position:relative;transition:transform .15s;}
 #chat-btn:hover{transform:scale(1.08);}
@@ -4593,8 +4593,8 @@ if ('serviceWorker' in navigator) {
         return`<button class="chat-reaction${iMine?' mine-r':''}" data-key="${m._key}" data-emoji="${emoji}">${emoji}<span>${count}</span></button>`;
       }).join('');
       html+=`<div class="chat-msg ${mine?'mine':'other'}">
-        ${!mine?`<div class="chat-msg-name" style="${isAdminMsg?'color:rgba(255,100,100,.8)':''}">${m.name}</div>`:''}
-        <div class="chat-msg-bubble" style="${isAdminMsg?(mine?'background:rgba(220,50,50,.35);border:1px solid rgba(220,50,50,.5)':'background:rgba(220,50,50,.2);border:1px solid rgba(220,50,50,.35)'):''}">
+        ${!mine||isAdminMsg?`<div class="chat-msg-name" style="${isAdminMsg?'color:rgba(255,100,100,.9);font-weight:800':''}">${isAdminMsg?'⚙️ ':''} ${m.name}</div>`:''}
+        <div class="chat-msg-bubble" style="${isAdminMsg?'background:rgba(220,50,50,.3);border:1px solid rgba(220,50,50,.6)':''}">
           ${escHtml(m.text)}
         </div>
         ${reactHtml?`<div class="chat-msg-reactions">${reactHtml}</div>`:''}
