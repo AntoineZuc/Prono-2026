@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0e1a">
+  <title>Match Spécial — Le Super Site du Zuc</title>
+  <style>
+    :root{--bg:#0a0e1a;--bg2:#0d1628;--card:rgba(255,255,255,.06);--text:#e8f0fe;--muted:#7a95b8;--line:rgba(255,255,255,.1);--soft:rgba(255,255,255,.04);--green:#14c47d;--green2:#0a9d65;--gold:#f5c842;--shadow:0 8px 32px rgba(0,0,0,.4);--radius:18px;--accent:#1e6fff}
+    *,*::before,*::after{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Arial,'Segoe UI Emoji','Apple Color Emoji',system-ui,sans-serif;color:var(--text);min-height:100vh;background:var(--bg);
+      background-image:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(30,111,255,.18) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 80%,rgba(20,196,125,.12) 0%,transparent 55%);}
+    header,main{max-width:1200px;margin:auto;padding:16px}
+    main{padding-top:0;padding-bottom:80px}
+    .card{background:rgba(255,255,255,.06);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.08);padding:20px;margin-bottom:14px}
+    h2{margin:0 0 12px;font-size:18px;font-weight:700;color:var(--text)}
+    input,select{width:100%;padding:10px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;outline:none;transition:border-color .2s;font-family:inherit}
+    input:focus,select:focus{border-color:rgba(20,196,125,.6)}
+    select option{background:#0d1628}
+    label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+    button.primary{background:linear-gradient(135deg,#14c47d,#0a9d65);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;padding:10px 18px;transition:opacity .15s}
+    button.primary:hover{opacity:.85}
+    button.small{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:var(--text);border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;padding:5px 12px}
+    button.danger{background:rgba(220,50,50,.2);border:1px solid rgba(220,50,50,.4);color:#ff6b6b;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;padding:6px 14px}
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid}
+    .badge.warn{background:rgba(245,200,66,.15);color:var(--gold);border-color:rgba(245,200,66,.3)}
+    .badge.info{background:rgba(30,111,255,.15);color:#7eb8ff;border-color:rgba(30,111,255,.3)}
+    .badge.paid{background:rgba(20,196,125,.15);color:#4de8a8;border-color:rgba(20,196,125,.3)}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+    .empty{color:var(--muted);font-size:13px;padding:12px 0}
+    .score-sm{width:44px!important;text-align:center;font-size:16px;font-weight:700;padding:6px 4px!important}
+    .tab-bar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+    .tab{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.5);border-radius:999px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
+    .tab.active{background:rgba(20,196,125,.2);border-color:rgba(20,196,125,.5);color:#4de8a8}
+    .sm-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1e293b;color:#fff;padding:10px 20px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:all .3s;z-index:9999;white-space:nowrap}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    #portalBtn{position:fixed;top:12px;left:12px;z-index:8888;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;backdrop-filter:blur(8px)}
+    @media(max-width:600px){
+      .sm-grid{grid-template-columns:1fr!important}
+      input:not(.score-sm):not([type=checkbox]),select{width:100%!important;min-width:0!important;box-sizing:border-box!important;font-size:13px!important;padding:8px 10px!important}
+    }
+  </style>
+</head>
+<body>
+<button id="portalBtn" onclick="window.location.href='index.html'">⬅ Portail</button>
+<div id="app" style="padding:60px 16px 40px;max-width:800px;margin:0 auto"></div>
+<div id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// MATCH SPÉCIAL — Le Super Site du Zuc
+// Réutilise Firebase /state (specialMatch + specialPronos)
+// ══════════════════════════════════════════════
+const FB_URL='https://prono-2026-515b8-default-rtdb.firebaseio.com';
+const STORAGE_KEY='cdm2026v7';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+let _tt;
+const toast=msg=>{const el=$('toast');if(!el)return;el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2400);};
+function getSession(){try{const s=sessionStorage.getItem('cdm2026session');return s?JSON.parse(s):null;}catch(e){return null;}}
+function hashPwd(pwd){let h=0;for(let i=0;i<pwd.length;i++){h=Math.imul(31,h)+pwd.charCodeAt(i)|0;}return h.toString(36);}
+
+// ── Firebase ──────────────────────────────────
+async function fbGet(){
+  try{const r=await fetch(FB_URL+'/state.json',{cache:'no-store'});if(!r.ok)return null;return await r.json();}catch(e){return null;}
+}
+async function fbPatch(data){
+  try{const r=await fetch(FB_URL+'/state.json',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});return r.ok;}catch(e){return false;}
+}
+
+// ── Utils ─────────────────────────────────────
+function teamName(c){return c||'?';}
+function teamHtml(code){
+  if(!code)return`<span style="color:var(--muted)">À définir</span>`;
+  return`<span style="font-weight:700">${esc(code)}</span>`;
+}
+function dateFr(d){if(!d)return'';try{return new Date(d+'T12:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short'})}catch(e){return d}}
+function v(el){if(!el||el.value==='')return null;const n=Number(el.value);return isNaN(n)?null:n;}
+
+function _isStarted(sm){
+  if(!sm?.date||!sm?.time)return false;
+  const now=new Date().toLocaleString('fr-FR',{timeZone:'Europe/Paris'}).split(' ');
+  const [d,m,y]=now[0].split('/');const t=now[1]?.slice(0,5)||'00:00';
+  const nowStr=`${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}T${t}`;
+  return(sm.date+'T'+sm.time)<=nowStr;
+}
+
+// ── Calcul points match spécial ───────────────
+function calcSpecialPointsLive(sm,prono){
+  if(!sm||!prono||prono.scoreA==null)return{pts:0,detail:[]};
+  const pA=Number(prono.scoreA),pB=Number(prono.scoreB);
+  const mA=sm.scoreA!=null?Number(sm.scoreA):null;
+  const mB=sm.scoreB!=null?Number(sm.scoreB):null;
+  let pts=0;const detail=[];
+  const outcome=(a,b)=>a>b?'A':a<b?'B':'N';
+  if(mA!=null&&mB!=null){
+    if(pA===mA&&pB===mB){pts+=3;detail.push({icon:'⚽',text:`90min ${pA}-${pB} exact`,pts:3,color:'rgba(20,196,125,.9)'});}
+    else if(outcome(pA,pB)===outcome(mA,mB)){pts+=1;detail.push({icon:'⚽',text:'90min bon résultat',pts:1,color:'rgba(20,196,125,.7)'});}
+    else detail.push({icon:'⚽',text:'90min raté',pts:0,color:'rgba(252,129,129,.7)'});
+  }
+  // ET
+  if(sm.canET&&sm.scoreAET!=null&&prono.scoreAET!=null&&pA===pB){
+    const pEA=Number(prono.scoreAET),pEB=Number(prono.scoreBET||0);
+    const mEA=Number(sm.scoreAET),mEB=Number(sm.scoreBET||0);
+    const bET=pEA===mEA&&pEB===mEB?3:1;
+    pts+=bET;detail.push({icon:'🔵',text:bET===3?'Prolong. exact':'Prolong. prévu',pts:bET,color:'rgba(100,160,255,.9)'});
+  }
+  // TAB
+  if(sm.canET&&sm.penA!=null&&prono.penA!=null&&prono.scoreAET!=null&&Number(prono.scoreAET)===Number(prono.scoreBET)){
+    const pPA=Number(prono.penA),pPB=Number(prono.penB||0);
+    const mPA=Number(sm.penA),mPB=Number(sm.penB||0);
+    const bP=pPA===mPA&&pPB===mPB?3:1;
+    pts+=bP;detail.push({icon:'🟡',text:bP===3?'TAB exact':'TAB prévu',pts:bP,color:'rgba(245,200,66,.9)'});
+  }
+  return{pts,detail};
+}
+
+// ── Vue Admin ─────────────────────────────────
+function renderAdmin(state){
+  const sm=state.specialMatch;
+  const sp=state.specialPronos||{};
+  const players=state.players||[];
+  const muPlayers=players.filter(p=>p.groupIds?.includes('matchunique'));
+  const app=$('app');
+
+  if(!sm||!sm.teamA){
+    // Pas de match créé
+    app.innerHTML=`
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:44px;margin-bottom:8px">⚡</div>
+        <div style="font-size:22px;font-weight:900">Match Spécial</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">Administration</div>
+      </div>
+      <div class="card">
+        <h2>Créer un match</h2>
+        <div class="sm-grid" style="margin-bottom:12px">
+          <div><label>Équipe A</label><input id="smTeamA" placeholder="Ex: Paris"></div>
+          <div><label>Équipe B</label><input id="smTeamB" placeholder="Ex: Metz"></div>
+        </div>
+        <div class="sm-grid" style="margin-bottom:12px">
+          <div><label>Date</label><input id="smDate" type="date"></div>
+          <div><label>Heure (Paris)</label><input id="smTime" type="time" value="21:00"></div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:13px;text-transform:none;letter-spacing:0">
+          <input type="checkbox" id="smCanET" style="width:auto;accent-color:var(--green)"> Possibilité de prolongations/TAB
+        </label>
+        <button class="primary" id="smCreateBtn" style="width:100%">⚡ Créer le match</button>
+      </div>`;
+
+    $('smCreateBtn').addEventListener('click',async()=>{
+      const tA=($('smTeamA')?.value||'').trim();
+      const tB=($('smTeamB')?.value||'').trim();
+      const date=($('smDate')?.value||'').trim();
+      const time=($('smTime')?.value||'').trim();
+      if(!tA||!tB||!date||!time){toast('Remplis tous les champs');return;}
+      const newSM={teamA:tA,teamB:tB,date,time,canET:!!$('smCanET')?.checked,scoreA:null,scoreB:null,et90done:false,etDone:false,scoreAET:null,scoreBET:null,penA:null,penB:null,scorersA:[],scorersB:[]};
+      const ok=await fbPatch({specialMatch:newSM,specialPronos:{}});
+      if(ok){toast('✅ Match créé !');const s=await fbGet();if(s)renderAdmin(s);}
+      else toast('❌ Erreur Firebase');
+    });
+    return;
+  }
+
+  // Match existant
+  const started=_isStarted(sm);
+  const scoreStr=sm.scoreA!=null?`${sm.scoreA}-${sm.scoreB}`:'—';
+
+  app.innerHTML=`
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:40px;margin-bottom:6px">⚡</div>
+      <div style="font-size:20px;font-weight:900">Match Spécial — Admin</div>
+    </div>
+    <div class="tab-bar">
+      <button class="tab active" data-tab="live">📡 Live</button>
+      <button class="tab" data-tab="pronos">📋 Pronos</button>
+      <button class="tab" data-tab="classement">🏆 Classement</button>
+    </div>
+
+    <!-- LIVE -->
+    <div id="tab-live">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:16px;font-weight:800">⚡ ${esc(sm.teamA)} vs ${esc(sm.teamB)}</div>
+          <div style="font-size:11px;color:var(--muted)">${dateFr(sm.date)} ${sm.time} · ${started?'<span style="color:#14c47d">En cours / terminé</span>':'<span style="color:#f5c842">À venir</span>'}</div>
+        </div>
+        <div style="text-align:center;margin-bottom:20px">
+          <div style="font-size:48px;font-weight:900;letter-spacing:4px">${scoreStr}</div>
+          ${sm.scoreAET!=null?`<div style="font-size:16px;color:var(--muted)">Prolong: ${sm.scoreAET}-${sm.scoreBET}</div>`:''}
+          ${sm.penA!=null?`<div style="font-size:14px;color:var(--gold)">TAB: ${sm.penA}-${sm.penB}</div>`:''}
+        </div>
+        <!-- Saisie score -->
+        <div style="margin-bottom:14px">
+          <label>Score 90min</label>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <input class="score-sm" id="adScoreA" type="number" min="0" value="${sm.scoreA??''}">
+            <span style="font-weight:700">-</span>
+            <input class="score-sm" id="adScoreB" type="number" min="0" value="${sm.scoreB??''}">
+            <button class="primary small" id="adSaveScore">✓ Valider</button>
+            ${sm.scoreA!=null&&sm.scoreA===sm.scoreB&&sm.canET&&!sm.et90done?`<button class="small" id="adFin90">Fin 90min →</button>`:''}
+          </div>
+        </div>
+        ${sm.et90done&&sm.scoreAET==null?`
+        <div style="margin-bottom:14px">
+          <label>Score prolongations</label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input class="score-sm" id="adETa" type="number" min="${sm.scoreA??0}">
+            <span>-</span>
+            <input class="score-sm" id="adETb" type="number" min="${sm.scoreB??0}">
+            <button class="primary small" id="adSaveET">✓ Valider ET</button>
+          </div>
+        </div>`:''}
+        ${sm.scoreAET!=null&&sm.scoreAET===sm.scoreBET&&!sm.etDone?`
+        <div style="margin-bottom:14px">
+          <label>Tirs au but</label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input class="score-sm" id="adPenA" type="number" min="0">
+            <span>-</span>
+            <input class="score-sm" id="adPenB" type="number" min="0">
+            <button class="primary small" id="adSavePen">✓ Valider TAB</button>
+          </div>
+        </div>`:''}
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="danger" id="adDeleteMatch">🗑 Supprimer le match</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PRONOS -->
+    <div id="tab-pronos" style="display:none">
+      <div class="card">
+        <h2 style="margin-bottom:14px">📋 Pronos (${muPlayers.length} joueurs)</h2>
+        ${muPlayers.length===0?'<div class="empty">Aucun joueur avec accès Match Spécial.</div>':
+          muPlayers.map(p=>{
+            const pr=sp[p.id];
+            return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+              <span style="font-weight:700;font-size:14px">${esc(p.name)}</span>
+              <span style="font-size:13px;color:var(--muted)">${pr&&pr.scoreA!=null?`${pr.scoreA}-${pr.scoreB}`:'—'}</span>
+            </div>`;
+          }).join('')}
+      </div>
+    </div>
+
+    <!-- CLASSEMENT -->
+    <div id="tab-classement" style="display:none">
+      <div class="card">
+        <h2 style="margin-bottom:14px">🏆 Classement</h2>
+        ${muPlayers.map(p=>{
+          const pr=sp[p.id];
+          const{pts}=calcSpecialPointsLive(sm,pr||{});
+          return{name:p.name,pts};
+        }).sort((a,b)=>b.pts-a.pts).map((s,i)=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span>${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`}</span>
+              <span style="font-weight:700">${esc(s.name)}</span>
+            </div>
+            <span style="font-size:18px;font-weight:900;color:var(--green)">${s.pts}pts</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  // Tabs
+  app.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('click',()=>{
+      app.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      ['live','pronos','classement'].forEach(id=>{
+        const el=$('tab-'+id);if(el)el.style.display=t.dataset.tab===id?'block':'none';
+      });
+    });
+  });
+
+  // Valider score
+  $('adSaveScore')?.addEventListener('click',async()=>{
+    const sA=v($('adScoreA')),sB=v($('adScoreB'));
+    if(sA===null||sB===null){toast('Entre les deux scores');return;}
+    const ok=await fbPatch({'specialMatch/scoreA':sA,'specialMatch/scoreB':sB});
+    if(ok){toast('Score enregistré');const s=await fbGet();if(s)renderAdmin(s);}
+    else toast('❌ Erreur');
+  });
+
+  $('adFin90')?.addEventListener('click',async()=>{
+    const ok=await fbPatch({'specialMatch/et90done':true});
+    if(ok){const s=await fbGet();if(s)renderAdmin(s);}
+  });
+
+  $('adSaveET')?.addEventListener('click',async()=>{
+    const etA=v($('adETa')),etB=v($('adETb'));
+    if(etA===null||etB===null){toast('Entre le score des prolongations');return;}
+    if(etA<(sm.scoreA??0)||etB<(sm.scoreB??0)){toast('Le score ET doit être ≥ score 90min');return;}
+    const updates={'specialMatch/scoreAET':etA,'specialMatch/scoreBET':etB};
+    if(etA!==etB)updates['specialMatch/etDone']=true;
+    const ok=await fbPatch(updates);
+    if(ok){const s=await fbGet();if(s)renderAdmin(s);}
+  });
+
+  $('adSavePen')?.addEventListener('click',async()=>{
+    const pA=v($('adPenA')),pB=v($('adPenB'));
+    if(pA===null||pB===null||pA===pB){toast('TAB doivent être différents');return;}
+    const ok=await fbPatch({'specialMatch/penA':pA,'specialMatch/penB':pB,'specialMatch/etDone':true});
+    if(ok){const s=await fbGet();if(s)renderAdmin(s);}
+  });
+
+  $('adDeleteMatch')?.addEventListener('click',async()=>{
+    if(!confirm('Supprimer ce match spécial ?'))return;
+    const ok=await fbPatch({specialMatch:null,specialPronos:{}});
+    if(ok){toast('Match supprimé');const s=await fbGet();if(s)renderAdmin(s);}
+  });
+}
+
+// ── Vue Joueur ────────────────────────────────
+function renderPlayer(state,session){
+  const sm=state.specialMatch;
+  const sp=state.specialPronos||{};
+  const app=$('app');
+  const started=sm?_isStarted(sm):false;
+  const myProno=sp[session.pid]||{};
+  const{pts:myPts,detail}=calcSpecialPointsLive(sm,myProno);
+
+  if(!sm||!sm.teamA){
+    app.innerHTML=`<div style="text-align:center;padding:60px 20px">
+      <div style="font-size:52px;margin-bottom:12px">⚡</div>
+      <div style="font-size:18px;font-weight:800;margin-bottom:8px">Match Spécial</div>
+      <div style="color:var(--muted);font-size:14px">Aucun match pour le moment.<br>L'administrateur créera le prochain match.</div>
+    </div>`;
+    return;
+  }
+
+  const locked=started;
+  app.innerHTML=`
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:40px;margin-bottom:6px">⚡</div>
+      <div style="font-size:20px;font-weight:900">${esc(sm.teamA)} vs ${esc(sm.teamB)}</div>
+      <div style="font-size:12px;color:${locked?'#14c47d':'#f5c842'};margin-top:4px">
+        ${locked?'🔒 Pronos verrouillés':'⏳ Ouvert jusqu\'au '+dateFr(sm.date)+' '+sm.time}
+      </div>
+      ${myPts>0?`<div style="margin-top:10px;font-size:24px;font-weight:900;color:var(--green)">${myPts} pts</div>`:''}
+    </div>
+
+    <div class="tab-bar">
+      ${!locked?`<button class="tab active" data-tab="prono">🎯 Mon prono</button>`:''}
+      <button class="tab ${locked?'active':''}" data-tab="live">📡 Live</button>
+      <button class="tab" data-tab="classement">🏆 Classement</button>
+    </div>
+
+    ${!locked?`<div id="tab-prono">
+      <div class="card">
+        <h2>Mon pronostic</h2>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <span style="font-weight:700;font-size:15px">${esc(sm.teamA)}</span>
+          <input class="score-sm" id="pScoreA" type="number" min="0" value="${myProno.scoreA??''}">
+          <span>-</span>
+          <input class="score-sm" id="pScoreB" type="number" min="0" value="${myProno.scoreB??''}">
+          <span style="font-weight:700;font-size:15px">${esc(sm.teamB)}</span>
+        </div>
+        ${sm.canET?`
+        <div style="color:var(--muted);font-size:12px;margin-bottom:8px">(si nul à 90min)</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:12px;min-width:70px">Prolong.</span>
+          <input class="score-sm" id="pETa" type="number" min="0" value="${myProno.scoreAET??''}">
+          <span>-</span>
+          <input class="score-sm" id="pETb" type="number" min="0" value="${myProno.scoreBET??''}">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+          <span style="font-size:12px;min-width:70px">TAB</span>
+          <input class="score-sm" id="pPenA" type="number" min="0" value="${myProno.penA??''}">
+          <span>-</span>
+          <input class="score-sm" id="pPenB" type="number" min="0" value="${myProno.penB??''}">
+        </div>`:''}
+        <button class="primary" id="saveProno" style="width:100%">💾 Enregistrer</button>
+      </div>
+    </div>`:''}
+
+    <div id="tab-live" style="display:${locked?'block':'none'}">
+      <div class="card">
+        <h2>📡 Score en direct</h2>
+        <div style="text-align:center;font-size:48px;font-weight:900;margin:16px 0;letter-spacing:4px">
+          ${sm.scoreA!=null?`${sm.scoreA}-${sm.scoreB}`:'—'}
+        </div>
+        ${sm.scoreAET!=null?`<div style="text-align:center;color:var(--muted)">Prolong: ${sm.scoreAET}-${sm.scoreBET}</div>`:''}
+        ${sm.penA!=null?`<div style="text-align:center;color:var(--gold)">TAB: ${sm.penA}-${sm.penB}</div>`:''}
+        ${detail.length>0?`<div style="margin-top:16px;border-top:1px solid rgba(255,255,255,.08);padding-top:12px">
+          ${detail.map(d=>`<div style="font-size:12px;color:${d.color};margin-bottom:4px">${d.icon} ${d.text} → <b>+${d.pts}pts</b></div>`).join('')}
+          <div style="font-size:16px;font-weight:900;color:var(--green);margin-top:8px">Total : ${myPts} pts</div>
+        </div>`:''}
+        <div style="margin-top:14px;font-size:13px;color:var(--muted)">Mon prono : ${myProno.scoreA!=null?`${myProno.scoreA}-${myProno.scoreB}`:'Aucun'}</div>
+      </div>
+    </div>
+
+    <div id="tab-classement" style="display:none">
+      <div class="card">
+        <h2>🏆 Classement</h2>
+        ${Object.entries(sp).filter(([,pr])=>pr&&pr.scoreA!=null).map(([pid,pr])=>{
+          const p=(state.players||[]).find(x=>x.id===pid);
+          const{pts}=calcSpecialPointsLive(sm,pr);
+          return{name:p?.name||pid,pts,mine:pid===session.pid};
+        }).sort((a,b)=>b.pts-a.pts).map((s,i)=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);${s.mine?'background:rgba(20,196,125,.08);border-radius:10px;padding:10px;margin:0 -8px;':''}">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span>${i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`}</span>
+              <span style="font-weight:700">${esc(s.name)}${s.mine?' 👤':''}</span>
+            </div>
+            <span style="font-size:18px;font-weight:900;color:var(--green)">${s.pts}pts</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+
+  // Tabs
+  app.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('click',()=>{
+      app.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      ['prono','live','classement'].forEach(id=>{
+        const el=$('tab-'+id);if(el)el.style.display=t.dataset.tab===id?'block':'none';
+      });
+    });
+  });
+
+  // Enregistrer prono
+  $('saveProno')?.addEventListener('click',async()=>{
+    const sA=v($('pScoreA')),sB=v($('pScoreB'));
+    if(sA===null||sB===null){toast('Entre les deux scores');return;}
+    const prono={scoreA:sA,scoreB:sB};
+    if(sm.canET&&sA===sB){
+      const eA=v($('pETa')),eB=v($('pETb'));
+      if(eA!=null&&eB!=null){
+        if(eA<sA||eB<sB){toast('Le score ET doit être ≥ 90min');return;}
+        prono.scoreAET=eA;prono.scoreBET=eB;
+        if(eA===eB){const pA=v($('pPenA')),pB=v($('pPenB'));if(pA!=null&&pB!=null){if(pA===pB){toast('TAB doivent être différents');return;}prono.penA=pA;prono.penB=pB;}}
+      }
+    }
+    const ok=await fbPatch({[`specialPronos/${session.pid}`]:prono});
+    if(ok)toast('✅ Prono enregistré !');
+    else toast('❌ Erreur');
+  });
+}
+
+// ── Polling ───────────────────────────────────
+let _state=null,_session=null,_pollTimer=null;
+function startPolling(){
+  if(_pollTimer)clearInterval(_pollTimer);
+  _pollTimer=setInterval(async()=>{
+    const s=await fbGet();
+    if(s&&JSON.stringify({sm:s.specialMatch,sp:s.specialPronos})!==JSON.stringify({sm:_state?.specialMatch,sp:_state?.specialPronos})){
+      _state=s;
+      if(_session.role==='admin')renderAdmin(s);
+      else renderPlayer(s,_session);
+    }
+  },6000);
+}
+
+// ── Init ──────────────────────────────────────
+(async function(){
+  const session=getSession();
+  if(!session){window.location.href='index.html';return;}
+  _session=session;
+  if(!sessionStorage.getItem('from_portal')){window.location.href='index.html';return;}
+  sessionStorage.removeItem('from_portal');
+
+  $('app').innerHTML='<div style="text-align:center;padding:80px;color:#7a95b8"><div style="font-size:32px;margin-bottom:12px">⚡</div><div>Chargement…</div></div>';
+  const state=await fbGet();
+  _state=state;
+  if(session.role==='admin')renderAdmin(state||{});
+  else renderPlayer(state||{},session);
+  startPolling();
+})();
+</script>
+</body>
+</html>
