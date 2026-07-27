@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0a0e1a">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Le Super Site du Zuc</title>
+  <style>
+    :root{--bg:#0a0e1a;--text:#e8f0fe;--muted:#7a95b8;--green:#14c47d;--radius:18px;--shadow:0 8px 32px rgba(0,0,0,.4)}
+    *,*::before,*::after{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Arial,'Segoe UI Emoji',system-ui,sans-serif;color:var(--text);min-height:100vh;background:var(--bg);
+      background-image:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(30,111,255,.18) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 80%,rgba(20,196,125,.12) 0%,transparent 55%);}
+    input{width:100%;padding:10px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:15px;outline:none;transition:border-color .2s}
+    input:focus{border-color:rgba(20,196,125,.6)}
+    label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+    button.primary{background:linear-gradient(135deg,#14c47d,#0a9d65);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;padding:12px;transition:opacity .15s;width:100%}
+    button.primary:hover{opacity:.88}
+    .card{background:rgba(255,255,255,.06);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px}
+    .comp-card{background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.08);border-radius:16px;padding:16px 18px;display:flex;align-items:center;gap:14px;transition:all .15s}
+    .comp-card.active{cursor:pointer}
+    .comp-card.active:hover{background:rgba(255,255,255,.09);transform:translateY(-1px)}
+    .badge{font-size:10px;border-radius:999px;padding:3px 9px;font-weight:700;white-space:nowrap;border:1px solid}
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1e293b;color:#fff;padding:10px 20px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:all .3s;z-index:9999}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<script>
+// ══════════════════════════════════════════════
+// PORTAIL — Le Super Site du Zuc
+// Autonome : pas de shared.js, juste ce qu'il faut
+// ══════════════════════════════════════════════
+
+const FB_URL = 'https://prono-2026-515b8-default-rtdb.firebaseio.com';
+const STORAGE_KEY = 'cdm2026v7';
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+let _tt;
+const toast = msg => {const el=$('toast');if(!el)return;el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2400);};
+
+function getSession(){try{const s=sessionStorage.getItem('cdm2026session');return s?JSON.parse(s):null;}catch{return null;}}
+function setSession(d){try{sessionStorage.setItem('cdm2026session',JSON.stringify(d));}catch{}}
+function clearSession(){try{sessionStorage.removeItem('cdm2026session');}catch{}}
+function hashPwd(pwd){let h=0;for(let i=0;i<pwd.length;i++){h=Math.imul(31,h)+pwd.charCodeAt(i)|0;}return h.toString(36);}
+
+// Charger juste les joueurs depuis Firebase (pas le state CDM complet)
+async function loadPlayers(){
+  // 1. Cache local d'abord
+  try{
+    const local=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
+    if(local.players&&local.players.length) return {players:local.players, adminPwd:local.adminPwd||'admin'};
+  }catch{}
+  // 2. Firebase
+  try{
+    const r=await fetch(FB_URL+'/state.json',{cache:'no-store'});
+    if(r.ok){const d=await r.json();if(d&&d.players) return {players:d.players, adminPwd:d.adminPwd||'admin'};}
+  }catch{}
+  return {players:[], adminPwd:'admin'};
+}
+
+// ── PORTAIL ──────────────────────────────────
+const COMPETITIONS = [
+  {id:'cdm',  icon:'⚽', label:'Coupe du Monde / Euro', sub:'CDM 2026 — USA / Canada / Mexique', color:'#14c47d', active:true,  file:'cdm.html'},
+  {id:'ldc',  icon:'⭐', label:'Ligue des Champions',    sub:'Prochaine saison à venir',           color:'#f5c842', active:false, soon:true},
+  {id:'missf',icon:'👑', label:'Miss France',            sub:'Prochaine élection : déc. 2025',     color:'#e040fb', active:false, soon:true},
+  {id:'jeux', icon:'🎲', label:'Jeux de société',        sub:'Comptage de points entre amis',      color:'#ff7043', active:false, wip:true},
+];
+
+function buildPortal(playerName){
+  $('app').innerHTML=`
+    <div style="min-height:100vh;padding:24px 16px 40px">
+      <div style="max-width:460px;margin:0 auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px">
+          <div>
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">Bienvenue</div>
+            <div style="font-size:20px;font-weight:800">${esc(playerName)} 👋</div>
+          </div>
+          <button id="logoutBtn" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.5);border-radius:10px;padding:7px 14px;font-size:12px;cursor:pointer">Déconnexion</button>
+        </div>
+        <div style="text-align:center;margin-bottom:32px">
+          <div style="font-size:52px;margin-bottom:8px">🏆</div>
+          <div style="font-size:24px;font-weight:900;letter-spacing:-.5px">Le Super Site du Zuc</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">Choisis ta compétition</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${COMPETITIONS.map(c=>`
+            <div class="comp-card ${c.active?'active':''}" id="comp-${c.id}"
+              style="border-color:${c.active?c.color+'55':'rgba(255,255,255,.08)'};opacity:${c.wip?.6:1}">
+              <div style="font-size:34px;flex-shrink:0">${c.icon}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:15px;font-weight:800;color:${c.active?'#fff':'rgba(255,255,255,.45)'}">${c.label}</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px">${c.sub}</div>
+              </div>
+              <div style="flex-shrink:0">
+                ${c.active?`<span style="font-size:20px;color:${c.color}">›</span>`
+                  :c.wip?`<span class="badge" style="background:rgba(255,112,67,.2);color:#ff7043;border-color:rgba(255,112,67,.4)">🚧 En travaux</span>`
+                  :`<span class="badge" style="background:rgba(255,255,255,.07);color:rgba(255,255,255,.35);border-color:rgba(255,255,255,.1)">À venir</span>`}
+              </div>
+            </div>`).join('')}
+        </div>
+        <div style="margin-top:24px;text-align:center">
+          <button id="profileBtn" style="background:none;border:none;color:rgba(255,255,255,.3);font-size:12px;cursor:pointer;text-decoration:underline">📊 Mon profil &amp; historique</button>
+        </div>
+      </div>
+    </div>`;
+
+  $('logoutBtn').addEventListener('click',()=>{clearSession();location.reload();});
+  $('profileBtn').addEventListener('click',()=>toast('Profil & historique — bientôt disponible 📊'));
+  COMPETITIONS.filter(c=>c.active).forEach(c=>{
+    $('comp-'+c.id)?.addEventListener('click',()=>window.location.href=c.file);
+  });
+}
+
+// ── LOGIN ─────────────────────────────────────
+function buildLogin(){
+  $('app').innerHTML=`
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div style="width:100%;max-width:360px">
+        <div class="card" style="text-align:center">
+          <div style="font-size:52px;margin-bottom:10px">🏆</div>
+          <h1 style="font-size:22px;margin:0 0 24px;font-weight:900">Le Super Site du Zuc</h1>
+          <div id="loginError" style="display:none;background:#fff0f3;color:#a91537;border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13px;text-align:left"></div>
+          <div style="margin-bottom:12px;text-align:left">
+            <label for="loginName">Pseudo</label>
+            <input id="loginName" placeholder="Ton pseudo" autocomplete="username">
+          </div>
+          <div style="margin-bottom:20px;text-align:left">
+            <label for="loginPwd">Mot de passe</label>
+            <div style="position:relative">
+              <input id="loginPwd" type="password" placeholder="••••••" autocomplete="current-password" style="padding-right:40px">
+              <button type="button" onclick="const i=document.getElementById('loginPwd');i.type=i.type==='password'?'text':'password'"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:rgba(255,255,255,.5)">👁</button>
+            </div>
+          </div>
+          <button class="primary" id="loginBtn">Se connecter</button>
+          <p style="margin-top:12px;font-size:12px;color:var(--muted)">Tes identifiants sont fournis par l'administrateur</p>
+          <div style="margin-top:14px;background:rgba(255,160,50,.1);border:1px solid rgba(255,160,50,.3);border-radius:12px;padding:12px">
+            <p style="font-size:12px;color:rgba(255,200,80,.9);font-weight:700;margin:0 0 8px">⚠️ Première connexion ou nouvel appareil ?</p>
+            <button type="button" onclick="if(confirm('Vider le cache ?')){localStorage.clear();sessionStorage.clear();location.reload();}"
+              style="width:100%;background:rgba(255,160,50,.2);border:1px solid rgba(255,160,50,.5);color:rgba(255,200,80,.9);border-radius:8px;padding:8px;font-size:13px;font-weight:700;cursor:pointer">
+              🧹 Vider le cache
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  const doLogin = async () => {
+    const name = ($('loginName')?.value||'').trim();
+    const pwd  = ($('loginPwd')?.value||'').trim();
+    const err  = $('loginError');
+    if(!name||!pwd){if(err){err.textContent='Remplis tous les champs.';err.style.display='block';}return;}
+    const {players, adminPwd} = await loadPlayers();
+    // Admin
+    if(name.toLowerCase()==='admin' && pwd===adminPwd){
+      setSession({role:'admin'});
+      window.location.href='cdm.html';
+      return;
+    }
+    // Joueur
+    const player = players.find(p=>p.name?.toLowerCase()===name.toLowerCase());
+    if(player){
+      const ok = player.pwdClear ? pwd===player.pwdClear : hashPwd(pwd)===player.pwdHash;
+      if(ok){
+        setSession({role:'player', pid:player.id, name:player.name});
+        buildPortal(player.name);
+        return;
+      }
+    }
+    if(err){err.textContent='Pseudo ou mot de passe incorrect.';err.style.display='block';}
+  };
+
+  $('loginBtn').addEventListener('click', doLogin);
+  [$('loginName'),$('loginPwd')].forEach(el=>el?.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();}));
+}
+
+// ── INIT ──────────────────────────────────────
+(async function(){
+  const session = getSession();
+  if(session){
+    if(session.role==='admin'){window.location.href='cdm.html';return;}
+    if(session.role==='player'&&session.name){buildPortal(session.name);return;}
+    clearSession();
+  }
+  buildLogin();
+})();
+</script>
+</body>
+</html>
