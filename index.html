@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0a0e1a">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Le Super Site du Zuc</title>
+  <style>
+    :root{--bg:#0a0e1a;--text:#e8f0fe;--muted:#7a95b8;--green:#14c47d;--gold:#f5c842;--pink:#e040fb;--radius:16px;--shadow:0 8px 32px rgba(0,0,0,.4)}
+    *,*::before,*::after{box-sizing:border-box}
+    body{margin:0;font-family:Inter,Arial,'Segoe UI Emoji',system-ui,sans-serif;color:var(--text);min-height:100vh;background:var(--bg);
+      background-image:radial-gradient(ellipse 80% 50% at 20% 10%,rgba(30,111,255,.18) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 80%,rgba(20,196,125,.12) 0%,transparent 55%);}
+    input,select{width:100%;padding:10px 14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;outline:none;transition:border-color .2s;font-family:inherit}
+    input:focus,select:focus{border-color:rgba(20,196,125,.5)}
+    select option{background:#0d1628}
+    label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
+    button.primary{background:linear-gradient(135deg,#14c47d,#0a9d65);border:none;border-radius:12px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;padding:11px 20px;transition:opacity .15s}
+    button.primary:hover{opacity:.85}
+    button.secondary{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:var(--text);border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;padding:8px 16px}
+    button.danger{background:rgba(220,50,50,.15);border:1px solid rgba(220,50,50,.3);color:#ff6b6b;border-radius:10px;font-size:13px;cursor:pointer;padding:7px 14px}
+    .card{background:rgba(255,255,255,.05);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius);padding:20px;margin-bottom:12px}
+    .comp-card{background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.08);border-radius:var(--radius);padding:16px 18px;display:flex;align-items:center;gap:14px;transition:all .15s}
+    .comp-card.active{cursor:pointer}
+    .comp-card.active:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,.3)}
+    .badge{font-size:10px;border-radius:999px;padding:3px 9px;font-weight:700;border:1px solid;white-space:nowrap}
+    .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px}
+    .modal{background:#0d1628;border:1px solid rgba(255,255,255,.15);border-radius:18px;padding:22px;width:100%;max-width:500px;max-height:85vh;overflow-y:auto}
+    .toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+    .toggle input{opacity:0;width:0;height:0}
+    .slider{position:absolute;inset:0;background:rgba(255,255,255,.15);border-radius:999px;cursor:pointer;transition:.2s}
+    .slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+    input:checked+.slider{background:var(--green)}
+    input:checked+.slider:before{transform:translateX(18px)}
+    .row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+    .row:last-child{border-bottom:none}
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1e293b;color:#fff;padding:10px 20px;border-radius:999px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:all .3s;z-index:9999;white-space:nowrap}
+    #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<script>
+// ══════════════════════════════════════════════
+// LE SUPER SITE DU ZUC — PORTAIL
+// Les joueurs vivent dans /players (JAMAIS dans /state)
+// ══════════════════════════════════════════════
+const FB='https://prono-2026-515b8-default-rtdb.firebaseio.com';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+let _tt;
+const toast=msg=>{const el=$('toast');if(!el)return;el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2600);};
+function getSession(){
+  try{
+    const d=JSON.parse(localStorage.getItem('cdm2026session'));
+    if(!d)return null;
+    // Expiration 30 jours
+    if(d._exp&&Date.now()>d._exp){localStorage.removeItem('cdm2026session');return null;}
+    return d;
+  }catch(e){return null;}
+}
+function setSession(d){
+  try{
+    localStorage.setItem('cdm2026session',JSON.stringify({...d,_exp:Date.now()+30*24*3600*1000}));
+  }catch(e){}
+}
+function clearSession(){try{localStorage.removeItem('cdm2026session');}catch(e){}}
+function hashPwd(pwd){let h=0;for(let i=0;i<pwd.length;i++){h=Math.imul(31,h)+pwd.charCodeAt(i)|0;}return h.toString(36);}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+
+// ── Firebase /players (source de vérité absolue des joueurs) ──
+async function fbGetPlayers(){
+  try{const r=await fetch(`${FB}/players.json`,{cache:'no-store'});if(!r.ok)return{};return await r.json()||{};}catch(e){return{};}
+}
+async function fbSetPlayer(pid,data){
+  try{const r=await fetch(`${FB}/players/${pid}.json`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});return r.ok;}catch(e){return false;}
+}
+async function fbDeletePlayer(pid){
+  try{const r=await fetch(`${FB}/players/${pid}.json`,{method:'DELETE'});return r.ok;}catch(e){return false;}
+}
+async function fbGetAdminPwd(){
+  try{const r=await fetch(`${FB}/adminPwd.json`,{cache:'no-store'});if(!r.ok)return'admin';const d=await r.json();return d||'admin';}catch(e){return'admin';}
+}
+
+// ── Compétitions ──────────────────────────────
+const COMPETITIONS=[
+  {id:'cdm',  icon:'⚽',label:'Coupe du Monde / Euro',sub:'Pronos football',color:'#14c47d',file:'cdm.html',live:true},
+  {id:'special',icon:'⚡',label:'Match Spécial',       sub:'Un match unique entre deux équipes', color:'#f5c842',file:'special.html',live:true},
+  {id:'missf',icon:'👑',label:'Miss France',           sub:'Élection Miss France',              color:'#e040fb',file:'missf.html',live:true},
+  {id:'ldc',  icon:'⭐',label:'Ligue des Champions',  sub:'Pronos football',color:'#1a73e8',file:'ldc.html', live:true},
+  {id:'jeux', icon:'🎲',label:'Jeux de société',       sub:'Comptage de points entre amis',     color:'#ff7043',file:'jeux.html', live:true, noAuth:true},
+];
+
+// ── PORTAIL ──────────────────────────────────
+function buildPortal(playerName,role,players){
+  const isAdmin=role==='admin';
+  const session=getSession();
+  let visibleComps=COMPETITIONS;
+  if(!isAdmin&&session?.pid){
+    const p=Object.values(players||{}).find(x=>x.id===session.pid);
+    const ids=p?.competitionIds;
+    const allowed=ids?.length?ids:['cdm'];
+    visibleComps=COMPETITIONS.filter(c=>c.noAuth||allowed.includes(c.id));
+  }
+
+  $('app').innerHTML=`
+    <div style="min-height:100vh;padding:24px 16px 40px">
+      <div style="max-width:460px;margin:0 auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px">
+          <div>
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">${isAdmin?'⚙️ Administration':'Bienvenue'}</div>
+            <div style="font-size:20px;font-weight:800">${esc(playerName)} 👋</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            ${isAdmin?`
+              <button id="playersBtn" style="background:rgba(20,196,125,.15);border:1px solid rgba(20,196,125,.3);color:#14c47d;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">👥 Joueurs</button>
+              <button id="accessBtn" style="background:rgba(245,200,66,.15);border:1px solid rgba(245,200,66,.3);color:var(--gold);border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">🔑 Accès</button>`:''}
+            <button id="logoutBtn" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.5);border-radius:10px;padding:7px 14px;font-size:12px;cursor:pointer">Déconnexion</button>
+          </div>
+        </div>
+        <div style="text-align:center;margin-bottom:28px">
+          <div style="font-size:48px;margin-bottom:8px">🏆</div>
+          <div style="font-size:22px;font-weight:900">Le Super Site du Zuc</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">Choisis ta compétition</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${(isAdmin?COMPETITIONS:visibleComps).map(c=>`
+            <div class="comp-card ${c.live?'active':''}" id="comp-${c.id}"
+              style="border-color:${c.live?c.color+'55':'rgba(255,255,255,.08)'};opacity:${c.wip?.55:1}">
+              <div style="font-size:32px;flex-shrink:0">${c.icon}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:15px;font-weight:800;color:${c.live?'#fff':'rgba(255,255,255,.4)'}">${c.label}</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px">${c.sub}</div>
+              </div>
+              <div style="flex-shrink:0">
+                ${c.live?`<span style="font-size:20px;color:${c.color}">›</span>`
+                  :c.wip?`<span class="badge" style="background:rgba(255,112,67,.15);color:#ff7043;border-color:rgba(255,112,67,.3)">🚧 Bientôt</span>`
+                  :`<span class="badge" style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.3);border-color:rgba(255,255,255,.1)">À venir</span>`}
+              </div>
+            </div>`).join('')}
+        </div>
+        <div style="margin-top:20px;text-align:center">
+          <button id="profileBtn" style="background:none;border:none;color:rgba(255,255,255,.3);font-size:12px;cursor:pointer;text-decoration:underline">📊 Mon profil &amp; historique</button>
+        </div>
+      </div>
+    </div>`;
+
+  $('logoutBtn').addEventListener('click',()=>{clearSession();location.reload();});
+  $('profileBtn').addEventListener('click',()=>toast('Profil & historique — bientôt disponible 📊'));
+  // Attacher les listeners sur toutes les cartes actives rendues
+  (isAdmin?COMPETITIONS:visibleComps).forEach(c=>{
+    if(!c.live)return;
+    const el=$('comp-'+c.id);
+    if(!el)return;
+    el.addEventListener('click',()=>{
+      localStorage.setItem('from_portal','1');
+      window.location.href=c.file;
+    });
+  });
+  if(isAdmin){
+    $('playersBtn')?.addEventListener('click',()=>buildPlayersModal(players));
+    $('accessBtn')?.addEventListener('click',()=>buildAccessModal(players));
+  }
+}
+
+// ── MODALE JOUEURS (source: /players) ────────
+async function buildPlayersModal(playersObj){
+  let players=Object.values(playersObj||{});
+  const el=document.createElement('div');
+  el.className='modal-bg';
+  document.body.appendChild(el);
+
+  function render(){
+    el.innerHTML=`
+      <div class="modal">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <div style="font-size:16px;font-weight:800">👥 Joueurs</div>
+          <button id="closeP" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:20px;cursor:pointer">✕</button>
+        </div>
+        <!-- Ajouter -->
+        <div style="background:rgba(20,196,125,.08);border:1px solid rgba(20,196,125,.2);border-radius:12px;padding:14px;margin-bottom:16px">
+          <div style="font-size:12px;font-weight:700;color:#14c47d;margin-bottom:10px">➕ Ajouter un joueur</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div><label>Pseudo</label><input id="npName" placeholder="Pseudo" style="padding:7px 10px;font-size:13px"></div>
+            <div><label>Mot de passe</label><input id="npPwd" placeholder="Mot de passe" style="padding:7px 10px;font-size:13px"></div>
+          </div>
+          <button id="addPBtn" style="background:linear-gradient(135deg,#14c47d,#0a9d65);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;padding:8px 16px;width:100%">Ajouter</button>
+        </div>
+        <!-- Liste -->
+        <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:10px">${players.length} JOUEURS</div>
+        ${players.length===0?'<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px">Aucun joueur.</div>':
+          players.map(p=>`
+          <div class="row">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:700">${esc(p.name)}</div>
+              <div style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px">
+                <span id="pwd_${p.id}">mdp: ••••••</span>
+                <button onclick="togglePwd('${p.id}','${esc(p.pwdClear||'')}','${p.pwdHash||''}')" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0">👁</button>
+                · ${(p.competitionIds||['cdm']).join(', ')}
+              </div>
+            </div>
+            <button data-del="${p.id}" class="danger" style="padding:4px 10px;font-size:12px">✕</button>
+          </div>`).join('')}
+        <div id="pStatus" style="text-align:center;margin-top:12px;font-size:12px;color:var(--muted)"></div>
+      </div>`;
+
+    $('closeP').addEventListener('click',()=>el.remove());
+    el.addEventListener('click',e=>{if(e.target===el)el.remove();});
+
+    window.togglePwd=function(pid,clear,hash){
+      const el=document.getElementById('pwd_'+pid);
+      if(!el)return;
+      if(el.dataset.shown==='1'){el.textContent='mdp: ••••••';el.dataset.shown='0';}
+      else{
+        const shown=clear||'(changé par le joueur — hash: '+hash.slice(0,8)+'...)';
+        el.textContent='mdp: '+shown;el.dataset.shown='1';
+      }
+    };
+
+    $('addPBtn').addEventListener('click',async()=>{
+      const name=($('npName')?.value||'').trim();
+      const pwd=($('npPwd')?.value||'').trim();
+      if(!name||!pwd){setS('Remplis pseudo et mot de passe.');return;}
+      if(players.find(p=>p.name.toLowerCase()===name.toLowerCase())){setS('Ce pseudo existe déjà.');return;}
+      const pid=uid();
+      const newP={id:pid,name,pwdClear:pwd,pwdHash:hashPwd(pwd),pwdChanged:false,groupIds:[],competitionIds:['cdm'],favoriteTeam:null,easterEggDone:false,easterEggPts:0};
+      setS('Sauvegarde…');
+      const ok=await fbSetPlayer(pid,newP);
+      if(ok){players.push(newP);setS('✅ Joueur ajouté !');setTimeout(render,800);}
+      else setS('❌ Erreur Firebase');
+    });
+
+    el.querySelectorAll('[data-del]').forEach(btn=>{
+      btn.addEventListener('click',async()=>{
+        const pid=btn.dataset.del;
+        const p=players.find(x=>x.id===pid);
+        if(!confirm(`Supprimer ${p?.name} ? Ses pronos et historique seront conservés.`))return;
+        setS('Suppression…');
+        const ok=await fbDeletePlayer(pid);
+        if(ok){players=players.filter(x=>x.id!==pid);setS('Supprimé');setTimeout(render,600);}
+        else setS('❌ Erreur');
+      });
+    });
+  }
+
+  function setS(msg){const s=$('pStatus');if(s)s.textContent=msg;}
+  render();
+}
+
+// ── MODALE ACCÈS ─────────────────────────────
+async function buildAccessModal(playersObj){
+  const players=Object.values(playersObj||{}).filter(p=>!p.groupIds?.includes('matchunique')||p.groupIds?.length>1);
+  const el=document.createElement('div');
+  el.className='modal-bg';
+  document.body.appendChild(el);
+
+  el.innerHTML=`
+    <div class="modal">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+        <div style="font-size:16px;font-weight:800">🔑 Accès par compétition</div>
+        <button id="closeA" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:20px;cursor:pointer">✕</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:14px">Active ou désactive les compétitions pour chaque joueur.</div>
+      <div id="accessList">
+        ${players.map(p=>{
+          const ids=p.competitionIds||['cdm'];
+          return`<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.06)">
+            <div style="font-size:13px;font-weight:800;margin-bottom:8px">${esc(p.name)}</div>
+            ${COMPETITIONS.map(c=>`
+              <div class="row" style="padding:6px 0">
+                <div style="font-size:13px">${c.icon} ${c.label}</div>
+                <label class="toggle">
+                  <input type="checkbox" data-pid="${p.id}" data-cid="${c.id}" ${ids.includes(c.id)?'checked':''}>
+                  <span class="slider"></span>
+                </label>
+              </div>`).join('')}
+          </div>`;
+        }).join('')}
+      </div>
+      <div id="aStatus" style="text-align:center;margin-top:8px;font-size:12px;color:var(--muted)"></div>
+    </div>`;
+
+  $('closeA').addEventListener('click',()=>el.remove());
+  el.addEventListener('click',e=>{if(e.target===el)el.remove();});
+
+  el.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change',async()=>{
+      const pid=cb.dataset.pid;
+      const p=players.find(x=>x.id===pid);if(!p)return;
+      const boxes=el.querySelectorAll(`input[data-pid="${pid}"]`);
+      const newIds=[...boxes].filter(x=>x.checked).map(x=>x.dataset.cid);
+      p.competitionIds=newIds;
+      const s=$('aStatus');if(s){s.textContent='Sauvegarde…';s.style.color='var(--muted)';}
+      const ok=await fbSetPlayer(pid,{...p,competitionIds:newIds});
+      if(s){s.textContent=ok?'✅ Sauvegardé':'❌ Erreur';s.style.color=ok?'#14c47d':'#e53935';}
+      setTimeout(()=>{if(s)s.textContent='';},2000);
+    });
+  });
+}
+
+// ── ÉCRAN CHANGEMENT MOT DE PASSE (premier login) ──
+function buildChangePwdScreen(player, onDone){
+  $('app').innerHTML=`
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div style="width:100%;max-width:380px">
+        <div class="card" style="text-align:center">
+          <div style="font-size:44px;margin-bottom:10px">🔐</div>
+          <h1 style="font-size:20px;margin:0 0 6px;font-weight:900">Bienvenue ${esc(player.name)} !</h1>
+          <p style="color:var(--muted);font-size:13px;margin-bottom:24px">
+            Pour sécuriser ton compte, choisis un mot de passe personnel avant de continuer.
+          </p>
+          <div id="cpError" style="display:none;background:#fff0f3;color:#a91537;border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13px;text-align:left"></div>
+          <div style="margin-bottom:12px;text-align:left">
+            <label>Nouveau mot de passe</label>
+            <div style="position:relative">
+              <input id="cpPwd1" type="password" placeholder="Min. 4 caractères" style="padding-right:40px">
+              <button type="button" onclick="const i=document.getElementById('cpPwd1');i.type=i.type==='password'?'text':'password'"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:rgba(255,255,255,.5)">👁</button>
+            </div>
+          </div>
+          <div style="margin-bottom:20px;text-align:left">
+            <label>Confirmer le mot de passe</label>
+            <div style="position:relative">
+              <input id="cpPwd2" type="password" placeholder="Répète ton mot de passe" style="padding-right:40px">
+              <button type="button" onclick="const i=document.getElementById('cpPwd2');i.type=i.type==='password'?'text':'password'"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:rgba(255,255,255,.5)">👁</button>
+            </div>
+          </div>
+          <button class="primary" id="cpBtn" style="width:100%">Valider mon mot de passe →</button>
+        </div>
+      </div>
+    </div>`;
+
+  const doChange=async()=>{
+    const p1=($('cpPwd1')?.value||'').trim();
+    const p2=($('cpPwd2')?.value||'').trim();
+    const err=$('cpError');
+    if(p1.length<4){if(err){err.textContent='Minimum 4 caractères.';err.style.display='block';}return;}
+    if(p1!==p2){if(err){err.textContent='Les mots de passe ne correspondent pas.';err.style.display='block';}return;}
+    $('cpBtn').textContent='Sauvegarde…';$('cpBtn').disabled=true;
+    // Mettre à jour dans /players
+    const updated={...player,pwdClear:p1,pwdHash:hashPwd(p1),pwdChanged:true,pwdAdmin:null};
+    const ok=await fbSetPlayer(player.id,updated);
+    if(ok){
+      // Mettre à jour la session
+      setSession({role:'player',pid:player.id,name:player.name});
+      onDone(updated);
+    } else {
+      if(err){err.textContent='Erreur de sauvegarde, réessaie.';err.style.display='block';}
+      $('cpBtn').textContent='Valider mon mot de passe →';$('cpBtn').disabled=false;
+    }
+  };
+
+  $('cpBtn').addEventListener('click',doChange);
+  [$('cpPwd1'),$('cpPwd2')].forEach(el=>el?.addEventListener('keydown',e=>{if(e.key==='Enter')doChange();}));
+}
+
+// ── LOGIN ─────────────────────────────────────
+function buildLogin(){
+  $('app').innerHTML=`
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div style="width:100%;max-width:360px">
+        <div class="card" style="text-align:center">
+          <div style="font-size:52px;margin-bottom:10px">🏆</div>
+          <h1 style="font-size:22px;margin:0 0 24px;font-weight:900">Le Super Site du Zuc</h1>
+          <div id="loginError" style="display:none;background:#fff0f3;color:#a91537;border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:13px;text-align:left"></div>
+          <div style="margin-bottom:12px;text-align:left">
+            <label>Pseudo</label>
+            <input id="loginName" placeholder="Ton pseudo" autocomplete="username">
+          </div>
+          <div style="margin-bottom:20px;text-align:left">
+            <label>Mot de passe</label>
+            <div style="position:relative">
+              <input id="loginPwd" type="password" placeholder="••••••" autocomplete="current-password" style="padding-right:40px">
+              <button type="button" onclick="const i=document.getElementById('loginPwd');i.type=i.type==='password'?'text':'password'"
+                style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:rgba(255,255,255,.5)">👁</button>
+            </div>
+          </div>
+          <button class="primary" id="loginBtn" style="width:100%">Se connecter</button>
+          <p style="margin-top:12px;font-size:12px;color:var(--muted)">Tes identifiants sont fournis par l'administrateur</p>
+          <div style="margin-top:14px;background:rgba(255,160,50,.1);border:1px solid rgba(255,160,50,.3);border-radius:12px;padding:12px">
+            <p style="font-size:12px;color:rgba(255,200,80,.9);font-weight:700;margin:0 0 8px">⚠️ Première connexion ou nouvel appareil ?</p>
+            <button type="button" onclick="if(confirm('Vider le cache ?')){localStorage.clear();sessionStorage.clear();location.reload();}"
+              style="width:100%;background:rgba(255,160,50,.2);border:1px solid rgba(255,160,50,.5);color:rgba(255,200,80,.9);border-radius:8px;padding:8px;font-size:13px;font-weight:700;cursor:pointer">
+              🧹 Vider le cache
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  const doLogin=async()=>{
+    const name=($('loginName')?.value||'').trim();
+    const pwd=($('loginPwd')?.value||'').trim();
+    const err=$('loginError');
+    if(!name||!pwd){if(err){err.textContent='Remplis tous les champs.';err.style.display='block';}return;}
+    // Indicateur de chargement
+    const btn=$('loginBtn');
+    if(btn){btn.textContent='Connexion…';btn.disabled=true;}
+    if(err)err.style.display='none';
+    try{
+    // Charger depuis /players et /adminPwd
+    const [playersObj,adminPwd]=await Promise.all([fbGetPlayers(),fbGetAdminPwd()]);
+    // Test admin
+    if(name.toLowerCase()==='admin'&&pwd===adminPwd){
+      setSession({role:'admin'});
+      buildPortal('Admin','admin',playersObj);
+      return;
+    }
+    // Test joueur — chercher dans /players
+    const player=Object.values(playersObj).find(p=>p.name?.toLowerCase()===name.toLowerCase());
+    if(player){
+      const ok=player.pwdClear?pwd===player.pwdClear:hashPwd(pwd)===player.pwdHash;
+      if(ok){
+        setSession({role:'player',pid:player.id,name:player.name});
+        // Premier login → changer le mot de passe d'abord
+        if(!player.pwdChanged){
+          buildChangePwdScreen(player,(updated)=>{
+            buildPortal(updated.name,'player',{...playersObj,[updated.id]:updated});
+          });
+        } else {
+          buildPortal(player.name,'player',playersObj);
+        }
+        return;
+      }
+    }
+    if(err){err.textContent='Pseudo ou mot de passe incorrect.';err.style.display='block';}
+    }catch(e){
+      if(err){err.textContent='Erreur de connexion — vérifie ta connexion internet.';err.style.display='block';}
+    }finally{
+      const btn=$('loginBtn');
+      if(btn){btn.textContent='Se connecter';btn.disabled=false;}
+    }
+  };
+
+  $('loginBtn').addEventListener('click',doLogin);
+  [$('loginName'),$('loginPwd')].forEach(el=>el?.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();}));
+}
+
+// ── INIT ──────────────────────────────────────
+(async function(){
+  const session=getSession();
+  if(session){
+    const playersObj=await fbGetPlayers();
+    if(session.role==='admin'){buildPortal('Admin','admin',playersObj);return;}
+    if(session.role==='player'&&session.name){buildPortal(session.name,'player',playersObj);return;}
+    clearSession();
+  }
+  buildLogin();
+})();
+</script>
+</body>
+</html>
