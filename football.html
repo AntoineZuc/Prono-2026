@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Football — Le Super Site du Zuc</title>
+<style>
+:root{--bg:#0a0e1a;--text:#e8f0fe;--muted:#7a95b8;--green:#14c47d;--gold:#f5c842;--r:16px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 15% 10%,rgba(20,196,125,.12) 0%,transparent 55%),
+    radial-gradient(ellipse 60% 50% at 85% 85%,rgba(26,115,232,.1) 0%,transparent 55%)}
+#portalBtn{position:fixed;top:12px;left:12px;z-index:999;background:rgba(255,255,255,.1);
+  backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2);color:#fff;
+  border-radius:999px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.wrap{max-width:500px;margin:0 auto;padding:70px 16px 40px}
+.hero{text-align:center;margin-bottom:36px}
+.hero-icon{font-size:56px;margin-bottom:12px}
+.hero-title{font-size:28px;font-weight:900;letter-spacing:-.5px}
+.hero-sub{font-size:13px;color:var(--muted);margin-top:6px}
+.section-card{display:flex;align-items:center;gap:16px;padding:18px;
+  background:rgba(255,255,255,.05);backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.09);border-radius:var(--r);margin-bottom:12px;
+  cursor:pointer;transition:background .18s,transform .15s,border-color .18s;
+  text-decoration:none;color:inherit}
+.section-card:active{transform:scale(.98)}
+.section-card:hover{background:rgba(255,255,255,.09)}
+.section-icon{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;
+  justify-content:center;font-size:26px;flex-shrink:0}
+.section-body{flex:1;min-width:0}
+.section-name{font-size:16px;font-weight:800;margin-bottom:3px}
+.section-desc{font-size:12px;color:var(--muted);line-height:1.4}
+.section-arrow{font-size:20px;color:rgba(255,255,255,.25);flex-shrink:0}
+
+/* couleurs par section */
+.c-special .section-icon{background:rgba(245,200,66,.12)}
+.c-special{border-color:rgba(245,200,66,.18)}
+.c-special:hover{border-color:rgba(245,200,66,.35)}
+.c-special .section-name{color:#f5c842}
+
+.c-l1 .section-icon{background:rgba(255,255,255,.08)}
+.c-l1{border-color:rgba(255,255,255,.1)}
+.c-l1:hover{border-color:rgba(255,255,255,.25)}
+.c-l1 .section-name{color:#e8f0fe}
+
+.c-ldc .section-icon{background:rgba(26,115,232,.12)}
+.c-ldc{border-color:rgba(26,115,232,.18)}
+.c-ldc:hover{border-color:rgba(26,115,232,.4)}
+.c-ldc .section-name{color:#6ab4ff}
+
+.c-cdm .section-icon{background:rgba(20,196,125,.12)}
+.c-cdm{border-color:rgba(20,196,125,.18)}
+.c-cdm:hover{border-color:rgba(20,196,125,.4)}
+.c-cdm .section-name{color:#14c47d}
+
+.c-euro .section-icon{background:rgba(20,196,125,.08)}
+.c-euro{border-color:rgba(20,196,125,.12)}
+.c-euro:hover{border-color:rgba(20,196,125,.3)}
+.c-euro .section-name{color:#4dd9a0}
+
+.divider{height:1px;background:rgba(255,255,255,.06);margin:8px 0 16px}
+.divider-label{font-size:10px;font-weight:700;color:rgba(255,255,255,.2);
+  text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+</style>
+</head>
+<body>
+<button id="portalBtn" onclick="location.href='index.html'">⬅ Portail</button>
+<div class="wrap">
+  <div class="hero">
+    <div class="hero-icon">⚽</div>
+    <div class="hero-title">Football</div>
+    <div class="hero-sub">Choisis une compétition</div>
+  </div>
+
+  <!-- Match Spécial -->
+  <a class="section-card c-special" href="special.html">
+    <div class="section-icon">⚡</div>
+    <div class="section-body">
+      <div class="section-name">Match Spécial</div>
+      <div class="section-desc">Un match unique · Buteurs · Faits marquants pronostiqués</div>
+    </div>
+    <div class="section-arrow">›</div>
+  </a>
+
+  <!-- Ligue 1 -->
+  <a class="section-card c-l1" href="l1.html">
+    <div class="section-icon">🇫🇷</div>
+    <div class="section-body">
+      <div class="section-name">Ligue 1</div>
+      <div class="section-desc">Pronos journée par journée · Classement en direct</div>
+    </div>
+    <div class="section-arrow">›</div>
+  </a>
+
+  <!-- LDC -->
+  <a class="section-card c-ldc" href="ldc.html">
+    <div class="section-icon">⭐</div>
+    <div class="section-body">
+      <div class="section-name">Ligue des Champions</div>
+      <div class="section-desc">Phase championnat 36 clubs · Barrages · Phase KO</div>
+    </div>
+    <div class="section-arrow">›</div>
+  </a>
+
+  <div class="divider-label">Compétitions internationales</div>
+
+  <!-- CDM -->
+  <a class="section-card c-cdm" href="cdm.html">
+    <div class="section-icon">🏆</div>
+    <div class="section-body">
+      <div class="section-name">Coupe du Monde</div>
+      <div class="section-desc">Pronos par match · Groupes · Tableau final</div>
+    </div>
+    <div class="section-arrow">›</div>
+  </a>
+
+  <!-- Euro -->
+  <a class="section-card c-euro" href="cdm.html">
+    <div class="section-icon">🌍</div>
+    <div class="section-body">
+      <div class="section-name">Euro UEFA</div>
+      <div class="section-desc">Pronos par match · Groupes · Tableau final</div>
+    </div>
+    <div class="section-arrow">›</div>
+  </a>
+</div>
+</body>
+</html>
