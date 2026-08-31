@@ -1,0 +1,25 @@
+name: Synchro auto football-data.org
+
+on:
+  schedule:
+    # Toutes les 10 minutes — c'est à peu près le minimum fiable sur
+    # GitHub Actions (en dessous, les créneaux sont souvent retardés/sautés).
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {} # permet aussi de le lancer manuellement depuis l'onglet Actions
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le script
+        uses: actions/checkout@v4
+
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Lancer la synchro
+        env:
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
+        run: node .github/scripts/sync-football-data.js
