@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Suivi vignettes — Admin</title>
+<style>
+  body{background:#0a0e1a;margin:0;padding:0}
+  #portalBtn{position:fixed;top:12px;left:12px;z-index:999;background:rgba(255,255,255,.1);
+    backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:999px;
+    padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif}
+  #stx-wrap{padding-top:60px;padding-bottom:30px}
+  :root {
+    --paper: #f1ead4;
+    --paper-line: #d8cba8;
+    --ink: #1c2a22;
+    --pitch: #1f4a3d;
+    --pitch-dark: #163a30;
+    --manquant: #b3432b;
+    --manquant-bg: #f6ddd4;
+    --doublon: #2b5f9e;
+    --doublon-bg: #dbe7f6;
+  }
+
+  * { box-sizing: border-box; }
+
+  #stx-root {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--paper);
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(28,42,34,0.035) 28px);
+    color: var(--ink);
+    padding: 28px 24px 32px;
+    border-radius: 10px;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  #stx-root h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 600;
+    font-size: 25px;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+
+  #stx-root .stx-tagline {
+    font-size: 12.5px;
+    color: #7c8878;
+    margin: 0 0 18px;
+  }
+
+  .stx-step { display: none; }
+  .stx-step.stx-active { display: block; }
+
+  .stx-choice-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .stx-choice-card {
+    flex: 1 1 200px;
+    text-align: left;
+    background: #fffdf7;
+    border: 1.5px solid #cabf99;
+    border-radius: 8px;
+    padding: 16px 16px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s ease, transform 0.08s ease;
+  }
+  .stx-choice-card:hover { border-color: var(--pitch); }
+  .stx-choice-card:active { transform: scale(0.98); }
+  .stx-choice-card h3 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 16.5px;
+    margin: 0 0 5px;
+  }
+  .stx-choice-card p { font-size: 12.5px; color: #5c6a58; margin: 0; line-height: 1.5; }
+  .stx-choice-card.stx-choice-manquant h3 { color: var(--manquant); }
+  .stx-choice-card.stx-choice-doublon h3 { color: var(--doublon); }
+
+  .stx-back {
+    background: none;
+    border: none;
+    color: #5c6a58;
+    font-family: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .stx-back:hover { color: var(--ink); text-decoration: underline; }
+
+  .stx-mode-banner {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+  }
+  .stx-mode-banner.stx-banner-manquant { background: var(--manquant-bg); color: var(--manquant); }
+  .stx-mode-banner.stx-banner-doublon { background: var(--doublon-bg); color: var(--doublon); }
+
+  .stx-album-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  .stx-album-btn {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-radius: 7px;
+    border: 1.5px solid #cabf99;
+    background: #fffdf7;
+    color: var(--ink);
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.08s ease;
+  }
+  .stx-album-btn:hover { border-color: var(--pitch); background: #f7f1dd; }
+  .stx-album-btn:active { transform: scale(0.97); }
+  .stx-album-btn .stx-album-count { display: block; font-size: 11px; color: #7c8878; font-weight: 500; margin-top: 2px; }
+
+  .stx-album-btn-add {
+    border-style: dashed;
+    color: var(--pitch);
+    background: transparent;
+  }
+  .stx-album-btn-add:hover { background: #e6dcbd; }
+
+  .stx-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .stx-field label { font-size: 12.5px; color: #5c6a58; }
+  .stx-field input, .stx-field textarea {
+    font-family: inherit;
+    font-size: 13.5px;
+    padding: 9px 10px;
+    border: 1px solid #c4b790;
+    border-radius: 6px;
+    background: #fffdf7;
+    color: var(--ink);
+  }
+  .stx-field textarea { min-height: 80px; line-height: 1.5; resize: vertical; }
+  .stx-field input:focus, .stx-field textarea:focus { outline: 2px solid var(--pitch); outline-offset: 1px; }
+
+  .stx-btn {
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 9px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease;
+  }
+  .stx-btn:active { transform: scale(0.97); }
+  .stx-btn-primary { background: var(--pitch); color: #f1ead4; }
+  .stx-btn-primary:hover { background: var(--pitch-dark); }
+  .stx-btn-ghost { background: transparent; color: #5c6a58; border: 1px solid #c4b790; }
+  .stx-btn-ghost:hover { background: #e6dcbd; }
+
+  .stx-hint { font-size: 12px; color: #7c8878; margin-bottom: 14px; }
+
+  .stx-note-box {
+    background: #f7f1dd;
+    border: 1px solid #cabf99;
+    border-radius: 7px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: #52604f;
+    line-height: 1.55;
+    margin-top: 6px;
+  }
+
+  .stx-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    gap: 5px;
+    margin-bottom: 20px;
+  }
+
+  .stx-cell {
+    position: relative;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    padding: 8px 4px;
+    border-radius: 5px;
+    border: 1px solid #cabf99;
+    background: #fffdf7;
+    color: #3c4a3a;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.12s ease, border-color 0.12s ease, transform 0.06s ease;
+  }
+  .stx-cell:hover { border-color: var(--pitch); }
+  .stx-cell:active { transform: scale(0.94); }
+  .stx-cell.stx-on-manquant { background: var(--manquant-bg); border-color: var(--manquant); color: var(--manquant); font-weight: 700; }
+  .stx-cell.stx-on-doublon { background: var(--doublon-bg); border-color: var(--doublon); color: var(--doublon); font-weight: 700; }
+  .stx-cell .stx-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: var(--doublon);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 3px 4px;
+    border-radius: 999px;
+    min-width: 15px;
+  }
+
+  .stx-output-block {
+    background: #fffdf7;
+    border: 1px solid var(--paper-line);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .stx-output-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 9px;
+  }
+  .stx-output-head h2 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+  }
+  .stx-output-head .stx-count { font-size: 11.5px; color: #7c8878; }
+  .stx-output-text {
+    font-size: 13px;
+    line-height: 1.6;
+    color: #3c4a3a;
+    word-break: break-word;
+    min-height: 20px;
+    margin-bottom: 10px;
+  }
+  .stx-output-text.stx-empty { color: #a3ab98; font-style: italic; }
+
+  .stx-copied { color: var(--pitch); }
+
+  @media (max-width: 480px) {
+    #stx-root { padding: 20px 16px 26px; }
+    .stx-grid { grid-template-columns: repeat(auto-fill, minmax(54px, 1fr)); }
+  }
+</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+<script>
+// Outil personnel admin uniquement — un joueur qui tombe sur ce lien est
+// simplement renvoyé au portail, sans aucun indice sur ce qu'il y a ici.
+(function(){
+  const FB='https://prono-2026-515b8-default-rtdb.firebaseio.com';
+  function getSession(){try{const d=JSON.parse(localStorage.getItem('cdm2026session'));if(!d)return null;if(d._exp&&Date.now()>d._exp){localStorage.removeItem('cdm2026session');return null;}return d;}catch{return null;}}
+  const sess=getSession();
+  if(!sess||sess.role!=='admin'){location.href='index.html';}
+})();
+</script>
+<button id="portalBtn" onclick="location.href='index.html'">⬅ Portail</button>
+<div id="stx-wrap">
+<div id="stx-root">
+  <h1>Suivi vignettes</h1>
+  <p class="stx-tagline">Panini &amp; co — manquants et doublons, prêts à coller sur LastSticker</p>
+
+  <!-- Étape 1 : choix du type de liste -->
+  <div class="stx-step stx-active" id="stx-step-choice">
+    <div class="stx-choice-row">
+      <button class="stx-choice-card stx-choice-manquant" id="stx-choose-manquant">
+        <h3>Mes manquants</h3>
+        <p>Coche les vignettes qu'il te manque, pour générer ta liste de manquants.</p>
+      </button>
+      <button class="stx-choice-card stx-choice-doublon" id="stx-choose-doublon">
+        <h3>Mes doublons</h3>
+        <p>Coche tes doublons (clique plusieurs fois pour les triplons), pour générer ta liste de doublons.</p>
+      </button>
+    </div>
+  </div>
+
+  <!-- Étape 2 : choix de l'album -->
+  <div class="stx-step" id="stx-step-album">
+    <button class="stx-back" id="stx-back-1">← Retour</button>
+    <div class="stx-mode-banner" id="stx-album-banner"></div>
+
+    <div class="stx-album-grid" id="stx-album-grid"></div>
+  </div>
+
+  <!-- Étape 2bis : ajouter un nouvel album -->
+  <div class="stx-step" id="stx-step-add-album">
+    <button class="stx-back" id="stx-back-add">← Retour aux albums</button>
+    <div class="stx-mode-banner" id="stx-add-banner"></div>
+
+    <div class="stx-field">
+      <label for="stx-new-album-name">Nom de l'album</label>
+      <input id="stx-new-album-name" type="text" placeholder="ex : Panini Ligue 1 2026/27">
+    </div>
+    <div class="stx-field">
+      <label for="stx-new-album-list">Liste complète des codes, séparés par des virgules</label>
+      <textarea id="stx-new-album-list" placeholder="1, 2, 3, ... ou KOR1, KOR2, POR1, POR2..."></textarea>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="stx-btn stx-btn-primary" id="stx-save-album">Enregistrer cet album</button>
+      <button class="stx-btn stx-btn-ghost" id="stx-use-once">Utiliser sans enregistrer</button>
+    </div>
+    <div class="stx-note-box" id="stx-save-note" style="display:none;"></div>
+  </div>
+
+  <!-- Étape 3 : grille + liste résultat -->
+  <div class="stx-step" id="stx-step-grid">
+    <button class="stx-back" id="stx-back-2">← Retour</button>
+    <div class="stx-mode-banner" id="stx-grid-banner"></div>
+    <p class="stx-hint" id="stx-grid-hint"></p>
+
+    <div class="stx-grid" id="stx-grid"></div>
+
+    <div class="stx-output-block">
+      <div class="stx-output-head">
+        <h2 id="stx-output-title">Liste</h2>
+        <span class="stx-count" id="stx-output-count">0</span>
+      </div>
+      <div class="stx-output-text stx-empty" id="stx-output-text">Aucun pour l'instant</div>
+      <button class="stx-btn stx-btn-ghost" id="stx-copy">Copier la liste</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+(function () {
+  // ============================================================
+  // ALBUMS — pour en ajouter un manuellement (sans passer par l'outil),
+  // ajoute une entrée ici : "Nom de l'album": ["1","2","3", ...]
+  // ============================================================
+  // ALBUMS_START
+  const ALBUMS = {
+
+    "Panini Coupe du Monde FIFA Brésil 2014": ["00","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70","71","72","73","74","75","76","77","78","79","80","81","82","83","84","85","86","87","88","89","90","91","92","93","94","95","96","97","98","99","100","101","102","103","104","105","106","107","108","109","110","111","112","113","114","115","116","117","118","119","120","121","122","123","124","125","126","127","128","129","130","131","132","133","134","135","136","137","138","139","140","141","142","143","144","145","146","147","148","149","150","151","152","153","154","155","156","157","158","159","160","161","162","163","164","165","166","167","168","169","170","171","172","173","174","175","176","177","178","179","180","181","182","183","184","185","186","187","188","189","190","191","192","193","194","195","196","197","198","199","200","201","202","203","204","205","206","207","208","209","210","211","212","213","214","215","216","217","218","219","220","221","222","223","224","225","226","227","228","229","230","231","232","233","234","235","236","237","238","239","240","241","242","243","244","245","246","247","248","249","250","251","252","253","254","255","256","257","258","259","260","261","262","263","264","265","266","267","268","269","270","271","272","273","274","275","276","277","278","279","280","281","282","283","284","285","286","287","288","289","290","291","292","293","294","295","296","297","298","299","300","301","302","303","304","305","306","307","308","309","310","311","312","313","314","315","316","317","318","319","320","321","322","323","324","325","326","327","328","329","330","331","332","333","334","335","336","337","338","339","340","341","342","343","344","345","346","347","348","349","350","351","352","353","354","355","356","357","358","359","360","361","362","363","364","365","366","367","368","369","370","371","372","373","374","375","376","377","378","379","380","381","382","383","384","385","386","387","388","389","390","391","392","393","394","395","396","397","398","399","400","401","402","403","404","405","406","407","408","409","410","411","412","413","414","415","416","417","418","419","420","421","422","423","424","425","426","427","428","429","430","431","432","433","434","435","436","437","438","439","440","441","442","443","444","445","446","447","448","449","450","451","452","453","454","455","456","457","458","459","460","461","462","463","464","465","466","467","468","469","470","471","472","473","474","475","476","477","478","479","480","481","482","483","484","485","486","487","488","489","490","491","492","493","494","495","496","497","498","499","500","501","502","503","504","505","506","507","508","509","510","511","512","513","514","515","516","517","518","519","520","521","522","523","524","525","526","527","528","529","530","531","532","533","534","535","536","537","538","539","540","541","542","543","544","545","546","547","548","549","550","551","552","553","554","555","556","557","558","559","560","561","562","563","564","565","566","567","568","569","570","571","572","573","574","575","576","577","578","579","580","581","582","583","584","585","586","587","588","589","590","591","592","593","594","595","596","597","598","599","600","601","602","603","604","605","606","607","608","609","610","611","612","613","614","615","616","617","618","619","620","621","622","623","624","625","626","627","628","629","630","631","632","633","634","635","636","637","638","639","640","641","642","643","644"],
+    "Panini Coupe du Monde FIFA Russie 2018": ["00","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70","71","72","73","74","75","76","77","78","79","80","81","82","83","84","85","86","87","88","89","90","91","92","93","94","95","96","97","98","99","100","101","102","103","104","105","106","107","108","109","110","111","112","113","114","115","116","117","118","119","120","121","122","123","124","125","126","127","128","129","130","131","132","133","134","135","136","137","138","139","140","141","142","143","144","145","146","147","148","149","150","151","152","153","154","155","156","157","158","159","160","161","162","163","164","165","166","167","168","169","170","171","172","173","174","175","176","177","178","179","180","181","182","183","184","185","186","187","188","189","190","191","192","193","194","195","196","197","198","199","200","201","202","203","204","205","206","207","208","209","210","211","212","213","214","215","216","217","218","219","220","221","222","223","224","225","226","227","228","229","230","231","232","233","234","235","236","237","238","239","240","241","242","243","244","245","246","247","248","249","250","251","252","253","254","255","256","257","258","259","260","261","262","263","264","265","266","267","268","269","270","271","272","273","274","275","276","277","278","279","280","281","282","283","284","285","286","287","288","289","290","291","292","293","294","295","296","297","298","299","300","301","302","303","304","305","306","307","308","309","310","311","312","313","314","315","316","317","318","319","320","321","322","323","324","325","326","327","328","329","330","331","332","333","334","335","336","337","338","339","340","341","342","343","344","345","346","347","348","349","350","351","352","353","354","355","356","357","358","359","360","361","362","363","364","365","366","367","368","369","370","371","372","373","374","375","376","377","378","379","380","381","382","383","384","385","386","387","388","389","390","391","392","393","394","395","396","397","398","399","400","401","402","403","404","405","406","407","408","409","410","411","412","413","414","415","416","417","418","419","420","421","422","423","424","425","426","427","428","429","430","431","432","433","434","435","436","437","438","439","440","441","442","443","444","445","446","447","448","449","450","451","452","453","454","455","456","457","458","459","460","461","462","463","464","465","466","467","468","469","470","471","472","473","474","475","476","477","478","479","480","481","482","483","484","485","486","487","488","489","490","491","492","493","494","495","496","497","498","499","500","501","502","503","504","505","506","507","508","509","510","511","512","513","514","515","516","517","518","519","520","521","522","523","524","525","526","527","528","529","530","531","532","533","534","535","536","537","538","539","540","541","542","543","544","545","546","547","548","549","550","551","552","553","554","555","556","557","558","559","560","561","562","563","564","565","566","567","568","569","570","571","572","573","574","575","576","577","578","579","580","581","582","583","584","585","586","587","588","589","590","591","592","593","594","595","596","597","598","599","600","601","602","603","604","605","606","607","608","609","610","611","612","613","614","615","616","617","618","619","620","621","622","623","624","625","626","627","628","629","630","631","632","633","634","635","636","637","638","639","640","641","642","643","644","645","646","647","648","649","650","651","652","653","654","655","656","657","658","659","660","661","662","663","664","665","666","667","668","669","670","671","672","673","674","675","676","677","678","679","680","681"],
+    "Panini FIFA World Cup Qatar 2022 (Standard Edition)": ["00","FWC1","FWC2","FWC3","FWC4","FWC5","FWC6","FWC7","FWC8","FWC9","FWC10","FWC11","FWC12","FWC13","FWC14","FWC15","FWC16","FWC17","FWC18","QAT1","QAT2","QAT3","QAT4","QAT5","QAT6","QAT7","QAT8","QAT9","QAT10","QAT11","QAT12","QAT13","QAT14","QAT15","QAT16","QAT17","QAT18","QAT19","QAT20","ECU1","ECU2","ECU3","ECU4","ECU5","ECU6","ECU7","ECU8","ECU9","ECU10","ECU11","ECU12","ECU13","ECU14","ECU15","ECU16","ECU17","ECU18","ECU19","ECU20","SEN1","SEN2","SEN3","SEN4","SEN5","SEN6","SEN7","SEN8","SEN9","SEN10","SEN11","SEN12","SEN13","SEN14","SEN15","SEN16","SEN17","SEN18","SEN19","SEN20","NED1","NED2","NED3","NED4","NED5","NED6","NED7","NED8","NED9","NED10","NED11","NED12","NED13","NED14","NED15","NED16","NED17","NED18","NED19","NED20","ENG1","ENG2","ENG3","ENG4","ENG5","ENG6","ENG7","ENG8","ENG9","ENG10","ENG11","ENG12","ENG13","ENG14","ENG15","ENG16","ENG17","ENG18","ENG19","ENG20","IRN1","IRN2","IRN3","IRN4","IRN5","IRN6","IRN7","IRN8","IRN9","IRN10","IRN11","IRN12","IRN13","IRN14","IRN15","IRN16","IRN17","IRN18","IRN19","IRN20","USA1","USA2","USA3","USA4","USA5","USA6","USA7","USA8","USA9","USA10","USA11","USA12","USA13","USA14","USA15","USA16","USA17","USA18","USA19","USA20","WAL1","WAL2","WAL3","WAL4","WAL5","WAL6","WAL7","WAL8","WAL9","WAL10","WAL11","WAL12","WAL13","WAL14","WAL15","WAL16","WAL17","WAL18","WAL19","WAL20","ARG1","ARG2","ARG3","ARG4","ARG5","ARG6","ARG7","ARG8","ARG9","ARG10","ARG11","ARG12","ARG13","ARG14","ARG15","ARG16","ARG17","ARG18","ARG19","ARG20","KSA1","KSA2","KSA3","KSA4","KSA5","KSA6","KSA7","KSA8","KSA9","KSA10","KSA11","KSA12","KSA13","KSA14","KSA15","KSA16","KSA17","KSA18","KSA19","KSA20","MEX1","MEX2","MEX3","MEX4","MEX5","MEX6","MEX7","MEX8","MEX9","MEX10","MEX11","MEX12","MEX13","MEX14","MEX15","MEX16","MEX17","MEX18","MEX19","MEX20","POL1","POL2","POL3","POL4","POL5","POL6","POL7","POL8","POL9","POL10","POL11","POL12","POL13","POL14","POL15","POL16","POL17","POL18","POL19","POL20","FRA1","FRA2","FRA3","FRA4","FRA5","FRA6","FRA7","FRA8","FRA9","FRA10","FRA11","FRA12","FRA13","FRA14","FRA15","FRA16","FRA17","FRA18","FRA19","FRA20","AUS1","AUS2","AUS3","AUS4","AUS5","AUS6","AUS7","AUS8","AUS9","AUS10","AUS11","AUS12","AUS13","AUS14","AUS15","AUS16","AUS17","AUS18","AUS19","AUS20","DEN1","DEN2","DEN3","DEN4","DEN5","DEN6","DEN7","DEN8","DEN9","DEN10","DEN11","DEN12","DEN13","DEN14","DEN15","DEN16","DEN17","DEN18","DEN19","DEN20","TUN1","TUN2","TUN3","TUN4","TUN5","TUN6","TUN7","TUN8","TUN9","TUN10","TUN11","TUN12","TUN13","TUN14","TUN15","TUN16","TUN17","TUN18","TUN19","TUN20","ESP1","ESP2","ESP3","ESP4","ESP5","ESP6","ESP7","ESP8","ESP9","ESP10","ESP11","ESP12","ESP13","ESP14","ESP15","ESP16","ESP17","ESP18","ESP19","ESP20","CRC1","CRC2","CRC3","CRC4","CRC5","CRC6","CRC7","CRC8","CRC9","CRC10","CRC11","CRC12","CRC13","CRC14","CRC15","CRC16","CRC17","CRC18","CRC19","CRC20","GER1","GER2","GER3","GER4","GER5","GER6","GER7","GER8","GER9","GER10","GER11","GER12","GER13","GER14","GER15","GER16","GER17","GER18","GER19","GER20","JPN1","JPN2","JPN3","JPN4","JPN5","JPN6","JPN7","JPN8","JPN9","JPN10","JPN11","JPN12","JPN13","JPN14","JPN15","JPN16","JPN17","JPN18","JPN19","JPN20","BEL1","BEL2","BEL3","BEL4","BEL5","BEL6","BEL7","BEL8","BEL9","BEL10","BEL11","BEL12","BEL13","BEL14","BEL15","BEL16","BEL17","BEL18","BEL19","BEL20","CAN1","CAN2","CAN3","CAN4","CAN5","CAN6","CAN7","CAN8","CAN9","CAN10","CAN11","CAN12","CAN13","CAN14","CAN15","CAN16","CAN17","CAN18","CAN19","CAN20","MAR1","MAR2","MAR3","MAR4","MAR5","MAR6","MAR7","MAR8","MAR9","MAR10","MAR11","MAR12","MAR13","MAR14","MAR15","MAR16","MAR17","MAR18","MAR19","MAR20","CRO1","CRO2","CRO3","CRO4","CRO5","CRO6","CRO7","CRO8","CRO9","CRO10","CRO11","CRO12","CRO13","CRO14","CRO15","CRO16","CRO17","CRO18","CRO19","CRO20","BRA1","BRA2","BRA3","BRA4","BRA5","BRA6","BRA7","BRA8","BRA9","BRA10","BRA11","BRA12","BRA13","BRA14","BRA15","BRA16","BRA17","BRA18","BRA19","BRA20","SRB1","SRB2","SRB3","SRB4","SRB5","SRB6","SRB7","SRB8","SRB9","SRB10","SRB11","SRB12","SRB13","SRB14","SRB15","SRB16","SRB17","SRB18","SRB19","SRB20","SUI1","SUI2","SUI3","SUI4","SUI5","SUI6","SUI7","SUI8","SUI9","SUI10","SUI11","SUI12","SUI13","SUI14","SUI15","SUI16","SUI17","SUI18","SUI19","SUI20","CMR1","CMR2","CMR3","CMR4","CMR5","CMR6","CMR7","CMR8","CMR9","CMR10","CMR11","CMR12","CMR13","CMR14","CMR15","CMR16","CMR17","CMR18","CMR19","CMR20","POR1","POR2","POR3","POR4","POR5","POR6","POR7","POR8","POR9","POR10","POR11","POR12","POR13","POR14","POR15","POR16","POR17","POR18","POR19","POR20","GHA1","GHA2","GHA3","GHA4","GHA5","GHA6","GHA7","GHA8","GHA9","GHA10","GHA11","GHA12","GHA13","GHA14","GHA15","GHA16","GHA17","GHA18","GHA19","GHA20","URU1","URU2","URU3","URU4","URU5","URU6","URU7","URU8","URU9","URU10","URU11","URU12","URU13","URU14","URU15","URU16","URU17","URU18","URU19","URU20","KOR1","KOR2","KOR3","KOR4","KOR5","KOR6","KOR7","KOR8","KOR9","KOR10","KOR11","KOR12","KOR13","KOR14","KOR15","KOR16","KOR17","KOR18","KOR19","KOR20","FWC19","FWC20","FWC21","FWC22","FWC23","FWC24","FWC25","FWC26","FWC27","FWC28","FWC29"]
+,
+    "Panini FIFA World Cup 2026 (Standard Edition)": ["00", "FWC1", "FWC2", "FWC3", "FWC4", "FWC5", "FWC6", "FWC7", "FWC8", "MEX1", "MEX2", "MEX3", "MEX4", "MEX5", "MEX6", "MEX7", "MEX8", "MEX9", "MEX10", "MEX11", "MEX12", "MEX13", "MEX14", "MEX15", "MEX16", "MEX17", "MEX18", "MEX19", "MEX20", "RSA1", "RSA2", "RSA3", "RSA4", "RSA5", "RSA6", "RSA7", "RSA8", "RSA9", "RSA10", "RSA11", "RSA12", "RSA13", "RSA14", "RSA15", "RSA16", "RSA17", "RSA18", "RSA19", "RSA20", "KOR1", "KOR2", "KOR3", "KOR4", "KOR5", "KOR6", "KOR7", "KOR8", "KOR9", "KOR10", "KOR11", "KOR12", "KOR13", "KOR14", "KOR15", "KOR16", "KOR17", "KOR18", "KOR19", "KOR20", "CZE1", "CZE2", "CZE3", "CZE4", "CZE5", "CZE6", "CZE7", "CZE8", "CZE9", "CZE10", "CZE11", "CZE12", "CZE13", "CZE14", "CZE15", "CZE16", "CZE17", "CZE18", "CZE19", "CZE20", "CAN1", "CAN2", "CAN3", "CAN4", "CAN5", "CAN6", "CAN7", "CAN8", "CAN9", "CAN10", "CAN11", "CAN12", "CAN13", "CAN14", "CAN15", "CAN16", "CAN17", "CAN18", "CAN19", "CAN20", "BIH1", "BIH2", "BIH3", "BIH4", "BIH5", "BIH6", "BIH7", "BIH8", "BIH9", "BIH10", "BIH11", "BIH12", "BIH13", "BIH14", "BIH15", "BIH16", "BIH17", "BIH18", "BIH19", "BIH20", "QAT1", "QAT2", "QAT3", "QAT4", "QAT5", "QAT6", "QAT7", "QAT8", "QAT9", "QAT10", "QAT11", "QAT12", "QAT13", "QAT14", "QAT15", "QAT16", "QAT17", "QAT18", "QAT19", "QAT20", "SUI1", "SUI2", "SUI3", "SUI4", "SUI5", "SUI6", "SUI7", "SUI8", "SUI9", "SUI10", "SUI11", "SUI12", "SUI13", "SUI14", "SUI15", "SUI16", "SUI17", "SUI18", "SUI19", "SUI20", "BRA1", "BRA2", "BRA3", "BRA4", "BRA5", "BRA6", "BRA7", "BRA8", "BRA9", "BRA10", "BRA11", "BRA12", "BRA13", "BRA14", "BRA15", "BRA16", "BRA17", "BRA18", "BRA19", "BRA20", "MAR1", "MAR2", "MAR3", "MAR4", "MAR5", "MAR6", "MAR7", "MAR8", "MAR9", "MAR10", "MAR11", "MAR12", "MAR13", "MAR14", "MAR15", "MAR16", "MAR17", "MAR18", "MAR19", "MAR20", "HAI1", "HAI2", "HAI3", "HAI4", "HAI5", "HAI6", "HAI7", "HAI8", "HAI9", "HAI10", "HAI11", "HAI12", "HAI13", "HAI14", "HAI15", "HAI16", "HAI17", "HAI18", "HAI19", "HAI20", "SCO1", "SCO2", "SCO3", "SCO4", "SCO5", "SCO6", "SCO7", "SCO8", "SCO9", "SCO10", "SCO11", "SCO12", "SCO13", "SCO14", "SCO15", "SCO16", "SCO17", "SCO18", "SCO19", "SCO20", "USA1", "USA2", "USA3", "USA4", "USA5", "USA6", "USA7", "USA8", "USA9", "USA10", "USA11", "USA12", "USA13", "USA14", "USA15", "USA16", "USA17", "USA18", "USA19", "USA20", "PAR1", "PAR2", "PAR3", "PAR4", "PAR5", "PAR6", "PAR7", "PAR8", "PAR9", "PAR10", "PAR11", "PAR12", "PAR13", "PAR14", "PAR15", "PAR16", "PAR17", "PAR18", "PAR19", "PAR20", "AUS1", "AUS2", "AUS3", "AUS4", "AUS5", "AUS6", "AUS7", "AUS8", "AUS9", "AUS10", "AUS11", "AUS12", "AUS13", "AUS14", "AUS15", "AUS16", "AUS17", "AUS18", "AUS19", "AUS20", "TUR1", "TUR2", "TUR3", "TUR4", "TUR5", "TUR6", "TUR7", "TUR8", "TUR9", "TUR10", "TUR11", "TUR12", "TUR13", "TUR14", "TUR15", "TUR16", "TUR17", "TUR18", "TUR19", "TUR20", "GER1", "GER2", "GER3", "GER4", "GER5", "GER6", "GER7", "GER8", "GER9", "GER10", "GER11", "GER12", "GER13", "GER14", "GER15", "GER16", "GER17", "GER18", "GER19", "GER20", "CUW1", "CUW2", "CUW3", "CUW4", "CUW5", "CUW6", "CUW7", "CUW8", "CUW9", "CUW10", "CUW11", "CUW12", "CUW13", "CUW14", "CUW15", "CUW16", "CUW17", "CUW18", "CUW19", "CUW20", "CIV1", "CIV2", "CIV3", "CIV4", "CIV5", "CIV6", "CIV7", "CIV8", "CIV9", "CIV10", "CIV11", "CIV12", "CIV13", "CIV14", "CIV15", "CIV16", "CIV17", "CIV18", "CIV19", "CIV20", "ECU1", "ECU2", "ECU3", "ECU4", "ECU5", "ECU6", "ECU7", "ECU8", "ECU9", "ECU10", "ECU11", "ECU12", "ECU13", "ECU14", "ECU15", "ECU16", "ECU17", "ECU18", "ECU19", "ECU20", "NED1", "NED2", "NED3", "NED4", "NED5", "NED6", "NED7", "NED8", "NED9", "NED10", "NED11", "NED12", "NED13", "NED14", "NED15", "NED16", "NED17", "NED18", "NED19", "NED20", "JPN1", "JPN2", "JPN3", "JPN4", "JPN5", "JPN6", "JPN7", "JPN8", "JPN9", "JPN10", "JPN11", "JPN12", "JPN13", "JPN14", "JPN15", "JPN16", "JPN17", "JPN18", "JPN19", "JPN20", "SWE1", "SWE2", "SWE3", "SWE4", "SWE5", "SWE6", "SWE7", "SWE8", "SWE9", "SWE10", "SWE11", "SWE12", "SWE13", "SWE14", "SWE15", "SWE16", "SWE17", "SWE18", "SWE19", "SWE20", "TUN1", "TUN2", "TUN3", "TUN4", "TUN5", "TUN6", "TUN7", "TUN8", "TUN9", "TUN10", "TUN11", "TUN12", "TUN13", "TUN14", "TUN15", "TUN16", "TUN17", "TUN18", "TUN19", "TUN20", "BEL1", "BEL2", "BEL3", "BEL4", "BEL5", "BEL6", "BEL7", "BEL8", "BEL9", "BEL10", "BEL11", "BEL12", "BEL13", "BEL14", "BEL15", "BEL16", "BEL17", "BEL18", "BEL19", "BEL20", "EGY1", "EGY2", "EGY3", "EGY4", "EGY5", "EGY6", "EGY7", "EGY8", "EGY9", "EGY10", "EGY11", "EGY12", "EGY13", "EGY14", "EGY15", "EGY16", "EGY17", "EGY18", "EGY19", "EGY20", "IRN1", "IRN2", "IRN3", "IRN4", "IRN5", "IRN6", "IRN7", "IRN8", "IRN9", "IRN10", "IRN11", "IRN12", "IRN13", "IRN14", "IRN15", "IRN16", "IRN17", "IRN18", "IRN19", "IRN20", "NZL1", "NZL2", "NZL3", "NZL4", "NZL5", "NZL6", "NZL7", "NZL8", "NZL9", "NZL10", "NZL11", "NZL12", "NZL13", "NZL14", "NZL15", "NZL16", "NZL17", "NZL18", "NZL19", "NZL20", "ESP1", "ESP2", "ESP3", "ESP4", "ESP5", "ESP6", "ESP7", "ESP8", "ESP9", "ESP10", "ESP11", "ESP12", "ESP13", "ESP14", "ESP15", "ESP16", "ESP17", "ESP18", "ESP19", "ESP20", "CPV1", "CPV2", "CPV3", "CPV4", "CPV5", "CPV6", "CPV7", "CPV8", "CPV9", "CPV10", "CPV11", "CPV12", "CPV13", "CPV14", "CPV15", "CPV16", "CPV17", "CPV18", "CPV19", "CPV20", "KSA1", "KSA2", "KSA3", "KSA4", "KSA5", "KSA6", "KSA7", "KSA8", "KSA9", "KSA10", "KSA11", "KSA12", "KSA13", "KSA14", "KSA15", "KSA16", "KSA17", "KSA18", "KSA19", "KSA20", "URU1", "URU2", "URU3", "URU4", "URU5", "URU6", "URU7", "URU8", "URU9", "URU10", "URU11", "URU12", "URU13", "URU14", "URU15", "URU16", "URU17", "URU18", "URU19", "URU20", "FRA1", "FRA2", "FRA3", "FRA4", "FRA5", "FRA6", "FRA7", "FRA8", "FRA9", "FRA10", "FRA11", "FRA12", "FRA13", "FRA14", "FRA15", "FRA16", "FRA17", "FRA18", "FRA19", "FRA20", "SEN1", "SEN2", "SEN3", "SEN4", "SEN5", "SEN6", "SEN7", "SEN8", "SEN9", "SEN10", "SEN11", "SEN12", "SEN13", "SEN14", "SEN15", "SEN16", "SEN17", "SEN18", "SEN19", "SEN20", "IRQ1", "IRQ2", "IRQ3", "IRQ4", "IRQ5", "IRQ6", "IRQ7", "IRQ8", "IRQ9", "IRQ10", "IRQ11", "IRQ12", "IRQ13", "IRQ14", "IRQ15", "IRQ16", "IRQ17", "IRQ18", "IRQ19", "IRQ20", "NOR1", "NOR2", "NOR3", "NOR4", "NOR5", "NOR6", "NOR7", "NOR8", "NOR9", "NOR10", "NOR11", "NOR12", "NOR13", "NOR14", "NOR15", "NOR16", "NOR17", "NOR18", "NOR19", "NOR20", "ARG1", "ARG2", "ARG3", "ARG4", "ARG5", "ARG6", "ARG7", "ARG8", "ARG9", "ARG10", "ARG11", "ARG12", "ARG13", "ARG14", "ARG15", "ARG16", "ARG17", "ARG18", "ARG19", "ARG20", "ALG1", "ALG2", "ALG3", "ALG4", "ALG5", "ALG6", "ALG7", "ALG8", "ALG9", "ALG10", "ALG11", "ALG12", "ALG13", "ALG14", "ALG15", "ALG16", "ALG17", "ALG18", "ALG19", "ALG20", "AUT1", "AUT2", "AUT3", "AUT4", "AUT5", "AUT6", "AUT7", "AUT8", "AUT9", "AUT10", "AUT11", "AUT12", "AUT13", "AUT14", "AUT15", "AUT16", "AUT17", "AUT18", "AUT19", "AUT20", "JOR1", "JOR2", "JOR3", "JOR4", "JOR5", "JOR6", "JOR7", "JOR8", "JOR9", "JOR10", "JOR11", "JOR12", "JOR13", "JOR14", "JOR15", "JOR16", "JOR17", "JOR18", "JOR19", "JOR20", "POR1", "POR2", "POR3", "POR4", "POR5", "POR6", "POR7", "POR8", "POR9", "POR10", "POR11", "POR12", "POR13", "POR14", "POR15", "POR16", "POR17", "POR18", "POR19", "POR20", "COD1", "COD2", "COD3", "COD4", "COD5", "COD6", "COD7", "COD8", "COD9", "COD10", "COD11", "COD12", "COD13", "COD14", "COD15", "COD16", "COD17", "COD18", "COD19", "COD20", "UZB1", "UZB2", "UZB3", "UZB4", "UZB5", "UZB6", "UZB7", "UZB8", "UZB9", "UZB10", "UZB11", "UZB12", "UZB13", "UZB14", "UZB15", "UZB16", "UZB17", "UZB18", "UZB19", "UZB20", "COL1", "COL2", "COL3", "COL4", "COL5", "COL6", "COL7", "COL8", "COL9", "COL10", "COL11", "COL12", "COL13", "COL14", "COL15", "COL16", "COL17", "COL18", "COL19", "COL20", "ENG1", "ENG2", "ENG3", "ENG4", "ENG5", "ENG6", "ENG7", "ENG8", "ENG9", "ENG10", "ENG11", "ENG12", "ENG13", "ENG14", "ENG15", "ENG16", "ENG17", "ENG18", "ENG19", "ENG20", "CRO1", "CRO2", "CRO3", "CRO4", "CRO5", "CRO6", "CRO7", "CRO8", "CRO9", "CRO10", "CRO11", "CRO12", "CRO13", "CRO14", "CRO15", "CRO16", "CRO17", "CRO18", "CRO19", "CRO20", "GHA1", "GHA2", "GHA3", "GHA4", "GHA5", "GHA6", "GHA7", "GHA8", "GHA9", "GHA10", "GHA11", "GHA12", "GHA13", "GHA14", "GHA15", "GHA16", "GHA17", "GHA18", "GHA19", "GHA20", "PAN1", "PAN2", "PAN3", "PAN4", "PAN5", "PAN6", "PAN7", "PAN8", "PAN9", "PAN10", "PAN11", "PAN12", "PAN13", "PAN14", "PAN15", "PAN16", "PAN17", "PAN18", "PAN19", "PAN20", "FWC9", "FWC10", "FWC11", "FWC12", "FWC13", "FWC14", "FWC15", "FWC16", "FWC17", "FWC18", "FWC19"]
+,
+    "Panini UEFA Euro France 2016": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64", "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75", "76", "77", "78", "79", "80", "81", "82", "83", "84", "85", "86", "87", "88", "89", "90", "91", "92", "93", "94", "95", "96", "97", "98", "99", "100", "101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111", "112", "113", "114", "115", "116", "117", "118", "119", "120", "121", "122", "123", "124", "125", "126", "127", "128", "129", "130", "131", "132", "133", "134", "135", "136", "137", "138", "139", "140", "141", "142", "143", "144", "145", "146", "147", "148", "149", "150", "151", "152", "153", "154", "155", "156", "157", "158", "159", "160", "161", "162", "163", "164", "165", "166", "167", "168", "169", "170", "171", "172", "173", "174", "175", "176", "177", "178", "179", "180", "181", "182", "183", "184", "185", "186", "187", "188", "189", "190", "191", "192", "193", "194", "195", "196", "197", "198", "199", "200", "201", "202", "203", "204", "205", "206", "207", "208", "209", "210", "211", "212", "213", "214", "215", "216", "217", "218", "219", "220", "221", "222", "223", "224", "225", "226", "227", "228", "229", "230", "231", "232", "233", "234", "235", "236", "237", "238", "239", "240", "241", "242", "243", "244", "245", "246", "247", "248", "249", "250", "251", "252", "253", "254", "255", "256", "257", "258", "259", "260", "261", "262", "263", "264", "265", "266", "267", "268", "269", "270", "271", "272", "273", "274", "275", "276", "277", "278", "279", "280", "281", "282", "283", "284", "285", "286", "287", "288", "289", "290", "291", "292", "293", "294", "295", "296", "297", "298", "299", "300", "301", "302", "303", "304", "305", "306", "307", "308", "309", "310", "311", "312", "313", "314", "315", "316", "317", "318", "319", "320", "321", "322", "323", "324", "325", "326", "327", "328", "329", "330", "331", "332", "333", "334", "335", "336", "337", "338", "339", "340", "341", "342", "343", "344", "345", "346", "347", "348", "349", "350", "351", "352", "353", "354", "355", "356", "357", "358", "359", "360", "361", "362", "363", "364", "365", "366", "367", "368", "369", "370", "371", "372", "373", "374", "375", "376", "377", "378", "379", "380", "381", "382", "383", "384", "385", "386", "387", "388", "389", "390", "391", "392", "393", "394", "395", "396", "397", "398", "399", "400", "401", "402", "403", "404", "405", "406", "407", "408", "409", "410", "411", "412", "413", "414", "415", "416", "417", "418", "419", "420", "421", "422", "423", "424", "425", "426", "427", "428", "429", "430", "431", "432", "433", "434", "435", "436", "437", "438", "439", "440", "441", "442", "443", "444", "445", "446", "447", "448", "449", "450", "451", "452", "453", "454", "455", "456", "457", "458", "459", "460", "461", "462", "463", "464", "465", "466", "467", "468", "469", "470", "471", "472", "473", "474", "475", "476", "477", "478", "479", "480", "481", "482", "483", "484", "485", "486", "487", "488", "489", "490", "491", "492", "493", "494", "495", "496", "497", "498", "499", "500", "501", "502", "503", "504", "505", "506", "507", "508", "509", "510", "511", "512", "513", "514", "515", "516", "517", "518", "519", "520", "521", "522", "523", "524", "525", "526", "527", "528", "529", "530", "531", "532", "533", "534", "535", "536", "537", "538", "539", "540", "541", "542", "543", "544", "545", "546", "547", "548", "549", "550", "551", "552", "553", "554", "555", "556", "557", "558", "559", "560", "561", "562", "563", "564", "565", "566", "567", "568", "569", "570", "571", "572", "573", "574", "575", "576", "577", "578", "579", "580", "581", "582", "583", "584", "585", "586", "587", "588", "589", "590", "591", "592", "593", "594", "595", "596", "597", "598", "599", "600", "601", "602", "603", "604", "605", "606", "607", "608", "609", "610", "611", "612", "613", "614", "615", "616", "617", "618", "619", "620", "621", "622", "623", "624", "625", "626", "627", "628", "629", "630", "631", "632", "633", "634", "635", "636", "637", "638", "639", "640", "641", "642", "643", "644", "645", "646", "647", "648", "649", "650", "651", "652", "653", "654", "655", "656", "657", "658", "659", "660", "661", "662", "663", "664", "665", "666", "667", "668", "669", "670", "671", "672", "673", "674", "675", "676", "677", "678", "679", "680"]
+,
+    "Panini UEFA Euro 2020 Tournament Edition": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64", "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75", "76", "77", "78", "79", "80", "81", "82", "83", "84", "85", "86", "87", "88", "89", "90", "91", "92", "93", "94", "95", "96", "97", "98", "99", "100", "101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111", "112", "113", "114", "115", "116", "117", "118", "119", "120", "121", "122", "123", "124", "125", "126", "127", "128", "129", "130", "131", "132", "133", "134", "135", "136", "137", "138", "139", "140", "141", "142", "143", "144", "145", "146", "147", "148", "149", "150", "151", "152", "153", "154", "155", "156", "157", "158", "159", "160", "161", "162", "163", "164", "165", "166", "167", "168", "169", "170", "171", "172", "173", "174", "175", "176", "177", "178", "179", "180", "181", "182", "183", "184", "185", "186", "187", "188", "189", "190", "191", "192", "193", "194", "195", "196", "197", "198", "199", "200", "201", "202", "203", "204", "205", "206", "207", "208", "209", "210", "211", "212", "213", "214", "215", "216", "217", "218", "219", "220", "221", "222", "223", "224", "225", "226", "227", "228", "229", "230", "231", "232", "233", "234", "235", "236", "237", "238", "239", "240", "241", "242", "243", "244", "245", "246", "247", "248", "249", "250", "251", "252", "253", "254", "255", "256", "257", "258", "259", "260", "261", "262", "263", "264", "265", "266", "267", "268", "269", "270", "271", "272", "273", "274", "275", "276", "277", "278", "279", "280", "281", "282", "283", "284", "285", "286", "287", "288", "289", "290", "291", "292", "293", "294", "295", "296", "297", "298", "299", "300", "301", "302", "303", "304", "305", "306", "307", "308", "309", "310", "311", "312", "313", "314", "315", "316", "317", "318", "319", "320", "321", "322", "323", "324", "325", "326", "327", "328", "329", "330", "331", "332", "333", "334", "335", "336", "337", "338", "339", "340", "341", "342", "343", "344", "345", "346", "347", "348", "349", "350", "351", "352", "353", "354", "355", "356", "357", "358", "359", "360", "361", "362", "363", "364", "365", "366", "367", "368", "369", "370", "371", "372", "373", "374", "375", "376", "377", "378", "379", "380", "381", "382", "383", "384", "385", "386", "387", "388", "389", "390", "391", "392", "393", "394", "395", "396", "397", "398", "399", "400", "401", "402", "403", "404", "405", "406", "407", "408", "409", "410", "411", "412", "413", "414", "415", "416", "417", "418", "419", "420", "421", "422", "423", "424", "425", "426", "427", "428", "429", "430", "431", "432", "433", "434", "435", "436", "437", "438", "439", "440", "441", "442", "443", "444", "445", "446", "447", "448", "449", "450", "451", "452", "453", "454", "455", "456", "457", "458", "459", "460", "461", "462", "463", "464", "465", "466", "467", "468", "469", "470", "471", "472", "473", "474", "475", "476", "477", "478", "479", "480", "481", "482", "483", "484", "485", "486", "487", "488", "489", "490", "491", "492", "493", "494", "495", "496", "497", "498", "499", "500", "501", "502", "503", "504", "505", "506", "507", "508", "509", "510", "511", "512", "513", "514", "515", "516", "517", "518", "519", "520", "521", "522", "523", "524", "525", "526", "527", "528", "529", "530", "531", "532", "533", "534", "535", "536", "537", "538", "539", "540", "541", "542", "543", "544", "545", "546", "547", "548", "549", "550", "551", "552", "553", "554", "555", "556", "557", "558", "559", "560", "561", "562", "563", "564", "565", "566", "567", "568", "569", "570", "571", "572", "573", "574", "575", "576", "577", "578", "579", "580", "581", "582", "583", "584", "585", "586", "587", "588", "589", "590", "591", "592", "593", "594", "595", "596", "597", "598", "599", "600", "601", "602", "603", "604", "605", "606", "607", "608", "609", "610", "611", "612", "613", "614", "615", "616", "617", "618", "619", "620", "621", "622", "623", "624", "625", "626", "627", "628", "629", "630", "631", "632", "633", "634", "635", "636", "637", "638", "639", "640", "641", "642", "643", "644", "645", "646", "647", "648", "649", "650", "651", "652", "653", "654", "655", "656", "657", "658", "659", "660", "661", "662", "663", "664", "665", "666", "667", "668", "669", "670", "671", "672", "673", "674", "675", "676", "677", "678"]
+,
+    "Foot Ligue 1 2025-2026 (Panini)": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "62", "63", "64", "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75", "76", "77", "78", "79", "80", "81", "82", "83", "84", "85", "86", "87", "88", "89", "90", "91", "92", "93", "94", "95", "96", "97", "98", "99", "100", "101", "102", "103", "104", "105", "106", "107", "108", "109", "110", "111", "112", "113", "114", "115", "116", "117", "118", "119", "120", "121", "122", "123", "124", "125", "126", "127", "128", "129", "130", "131", "132", "133", "134", "135", "136", "137", "138", "139", "140", "141", "142", "143", "144", "145", "146", "147", "148", "149", "150", "151", "152", "153", "154", "155", "156", "157", "158", "159", "160", "161", "162", "163", "164", "165", "166", "167", "168", "169", "170", "171", "172", "173", "174", "175", "176", "177", "178", "179", "180", "181", "182", "183", "184", "185", "186", "187", "188", "189", "190", "191", "192", "193", "194", "195", "196", "197", "198", "199", "200", "201", "202", "203", "204", "205", "206", "207", "208", "209", "210", "211", "212", "213", "214", "215", "216", "217", "218", "219", "220", "221", "222", "223", "224", "225", "226", "227", "228", "229", "230", "231", "232", "233", "234", "235", "236", "237", "238", "239", "240", "241", "242", "243", "244", "245", "246", "247", "248", "249", "250", "251", "252", "253", "254", "255", "256", "257", "258", "259", "260", "261", "262", "263", "264", "265", "266", "267", "268", "269", "270", "271", "272", "273", "274", "275", "276", "277", "278", "279", "280", "281", "282", "283", "284", "285", "286", "287", "288", "289", "290", "291", "292", "293", "294", "295", "296", "297", "298", "299", "300", "301", "302", "303", "304", "305", "306", "307", "308", "309", "310", "311", "312", "313", "314", "315", "316", "317", "318", "319", "320", "321", "322", "323", "324", "325", "326", "327", "328", "329", "330", "331", "332", "333", "334", "335", "336", "337", "338", "339", "340", "341", "342", "343", "344", "345", "346", "347", "348", "349", "350", "351", "352", "353", "354", "355", "356", "357", "358", "359", "360", "361", "362", "363", "364", "365", "366", "367", "368", "369", "370", "371", "372", "373", "374", "375", "376", "377", "378", "379", "380", "381", "382", "383", "384", "385", "386", "387", "388", "389", "390", "391", "392", "393", "394", "395", "396", "397", "398", "399", "400", "401", "402", "403", "404", "405", "406", "407", "408", "409", "410", "411", "412", "413", "414", "415", "416", "417", "418", "419", "420", "421", "422", "423", "424", "425", "426", "427", "428", "429", "430", "431", "432", "433", "434", "435", "436", "437", "438", "439", "440", "441", "442", "443", "444", "445", "446", "447", "448", "449", "450", "451", "452", "453", "454", "455", "456", "457", "458", "459", "460", "461", "462", "463", "464", "465", "466", "467", "468", "469", "470", "471", "472", "473", "474", "475", "476", "477", "478", "479", "480", "481", "482", "483", "484", "485", "486", "487", "488", "489", "490", "491", "492", "493", "494", "495", "496", "497", "498", "499", "500", "501", "502", "503", "504", "505", "506", "507", "508", "509", "510", "511", "512", "513", "514", "515", "516", "517", "518", "519", "520", "521", "522", "523", "524", "525", "526", "527", "528", "529", "530", "531", "532", "533", "534", "535", "536", "537", "538", "539", "540", "541", "542", "543", "544", "545", "546", "547", "548", "549", "550", "551", "552", "553", "554", "555", "556"]
+  };
+  // ALBUMS_END
+
+  const stepChoice = document.getElementById('stx-step-choice');
+  const stepAlbum = document.getElementById('stx-step-album');
+  const stepAddAlbum = document.getElementById('stx-step-add-album');
+  const stepGrid = document.getElementById('stx-step-grid');
+
+  const chooseManquantBtn = document.getElementById('stx-choose-manquant');
+  const chooseDoublonBtn = document.getElementById('stx-choose-doublon');
+  const back1Btn = document.getElementById('stx-back-1');
+  const backAddBtn = document.getElementById('stx-back-add');
+  const back2Btn = document.getElementById('stx-back-2');
+
+  const albumBanner = document.getElementById('stx-album-banner');
+  const albumGrid = document.getElementById('stx-album-grid');
+
+  const addBanner = document.getElementById('stx-add-banner');
+  const newAlbumName = document.getElementById('stx-new-album-name');
+  const newAlbumList = document.getElementById('stx-new-album-list');
+  const saveAlbumBtn = document.getElementById('stx-save-album');
+  const useOnceBtn = document.getElementById('stx-use-once');
+  const saveNote = document.getElementById('stx-save-note');
+
+  const gridBanner = document.getElementById('stx-grid-banner');
+  const gridHint = document.getElementById('stx-grid-hint');
+  const gridEl = document.getElementById('stx-grid');
+  const outputTitle = document.getElementById('stx-output-title');
+  const outputCount = document.getElementById('stx-output-count');
+  const outputText = document.getElementById('stx-output-text');
+  const copyBtn = document.getElementById('stx-copy');
+
+  const MAX_DOUBLON = 9;
+
+  let mode = null;       // 'manquant' | 'doublon'
+  let codes = [];
+  let manquants = {};    // { code: true }
+  let doublons = {};     // { code: count }
+
+  function showStep(step) {
+    [stepChoice, stepAlbum, stepAddAlbum, stepGrid].forEach(s => s.classList.remove('stx-active'));
+    step.classList.add('stx-active');
+  }
+
+  function setBanner(el, label, isManquant) {
+    el.textContent = label;
+    el.className = 'stx-mode-banner ' + (isManquant ? 'stx-banner-manquant' : 'stx-banner-doublon');
+  }
+
+  function setMode(m) {
+    mode = m;
+    const isManquant = mode === 'manquant';
+    const label = isManquant ? 'Manquants' : 'Doublons';
+
+    setBanner(albumBanner, label, isManquant);
+    setBanner(addBanner, label, isManquant);
+    setBanner(gridBanner, label, isManquant);
+
+    gridHint.textContent = isManquant
+      ? "Clique sur une vignette pour la marquer manquante (reclique pour annuler)."
+      : "Clique sur une vignette à chaque doublon que tu as (2 clics = 2 exemplaires, etc).";
+
+    outputTitle.textContent = isManquant ? 'Liste des manquants' : 'Liste des doublons';
+
+    codes = [];
+    manquants = {};
+    doublons = {};
+  }
+
+  function renderAlbumButtons() {
+    albumGrid.innerHTML = '';
+    Object.keys(ALBUMS).forEach(name => {
+      const btn = document.createElement('button');
+      btn.className = 'stx-album-btn';
+      btn.innerHTML = name + '<span class="stx-album-count">' + ALBUMS[name].length + ' vignettes</span>';
+      btn.addEventListener('click', () => {
+        codes = ALBUMS[name].slice();
+        manquants = {};
+        doublons = {};
+        buildGrid();
+        showStep(stepGrid);
+      });
+      albumGrid.appendChild(btn);
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'stx-album-btn stx-album-btn-add';
+    addBtn.textContent = '+ Ajouter un nouvel album';
+    addBtn.addEventListener('click', () => {
+      newAlbumName.value = '';
+      newAlbumList.value = '';
+      saveNote.style.display = 'none';
+      showStep(stepAddAlbum);
+    });
+    albumGrid.appendChild(addBtn);
+  }
+
+  chooseManquantBtn.addEventListener('click', () => { setMode('manquant'); renderAlbumButtons(); showStep(stepAlbum); });
+  chooseDoublonBtn.addEventListener('click', () => { setMode('doublon'); renderAlbumButtons(); showStep(stepAlbum); });
+
+  back1Btn.addEventListener('click', () => showStep(stepChoice));
+  backAddBtn.addEventListener('click', () => showStep(stepAlbum));
+  back2Btn.addEventListener('click', () => showStep(stepAlbum));
+
+  function parseList(raw) {
+    return raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+  }
+
+  function startGridWith(codeList) {
+    codes = codeList;
+    manquants = {};
+    doublons = {};
+    buildGrid();
+    showStep(stepGrid);
+  }
+
+  useOnceBtn.addEventListener('click', () => {
+    const raw = newAlbumList.value.trim();
+    if (!raw) { alert("Colle d'abord ta liste de codes."); return; }
+    startGridWith(parseList(raw));
+  });
+
+  saveAlbumBtn.addEventListener('click', () => {
+    const name = newAlbumName.value.trim();
+    const raw = newAlbumList.value.trim();
+    if (!name) { alert("Donne un nom à l'album."); return; }
+    if (!raw) { alert("Colle d'abord ta liste de codes."); return; }
+
+    const parsed = parseList(raw);
+    ALBUMS[name] = parsed;
+    renderAlbumButtons();
+
+    saveNote.style.display = 'block';
+    saveNote.innerHTML = '<strong>' + name + '</strong> est ajouté pour cette session (' + parsed.length + ' codes). ' +
+      "Pour qu'il reste disponible la prochaine fois que tu ouvres ce fichier, clique sur \u00ab Télécharger le fichier mis à jour \u00bb ci-dessous, puis réutilise ce nouveau fichier téléchargé à la place de l'ancien.<br><br>" +
+      '<button class="stx-btn stx-btn-primary" id="stx-export-btn" style="margin-top:2px;">Télécharger le fichier mis à jour</button>';
+
+    document.getElementById('stx-export-btn').addEventListener('click', exportUpdatedFile);
+
+    startGridWith(parsed);
+  });
+
+  function buildGrid() {
+    gridEl.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    codes.forEach(code => {
+      const cell = document.createElement('div');
+      cell.className = 'stx-cell';
+      cell.textContent = code;
+      cell.addEventListener('click', () => handleClick(code, cell));
+      frag.appendChild(cell);
+    });
+    gridEl.appendChild(frag);
+    refreshOutput();
+  }
+
+  function handleClick(code, cell) {
+    if (mode === 'manquant') {
+      manquants[code] = !manquants[code];
+      if (!manquants[code]) delete manquants[code];
+      cell.classList.toggle('stx-on-manquant', !!manquants[code]);
+    } else {
+      const cur = doublons[code] || 0;
+      const next = cur >= MAX_DOUBLON ? 0 : cur + 1;
+      if (next === 0) delete doublons[code]; else doublons[code] = next;
+      cell.classList.toggle('stx-on-doublon', next > 0);
+      const existingBadge = cell.querySelector('.stx-badge');
+      if (existingBadge) existingBadge.remove();
+      if (next > 0) {
+        const badge = document.createElement('span');
+        badge.className = 'stx-badge';
+        badge.textContent = 'x' + next;
+        cell.appendChild(badge);
+      }
+    }
+    refreshOutput();
+  }
+
+  function refreshOutput() {
+    let list;
+    if (mode === 'manquant') {
+      list = codes.filter(c => manquants[c]);
+    } else {
+      list = [];
+      codes.forEach(c => {
+        const n = doublons[c] || 0;
+        for (let i = 0; i < n; i++) list.push(c);
+      });
+    }
+    outputCount.textContent = list.length;
+    if (list.length) {
+      outputText.textContent = list.join(', ');
+      outputText.classList.remove('stx-empty');
+    } else {
+      outputText.textContent = "Aucun pour l'instant";
+      outputText.classList.add('stx-empty');
+    }
+  }
+
+  copyBtn.addEventListener('click', () => {
+    const text = outputText.textContent;
+    if (!text || outputText.classList.contains('stx-empty')) return;
+    navigator.clipboard.writeText(text).then(() => {
+      const original = copyBtn.textContent;
+      copyBtn.textContent = 'Copié !';
+      copyBtn.classList.add('stx-copied');
+      setTimeout(() => {
+        copyBtn.textContent = original;
+        copyBtn.classList.remove('stx-copied');
+      }, 1200);
+    });
+  });
+
+  // ============================================================
+  // Export : régénère le fichier HTML complet avec les albums
+  // actuels (y compris ceux ajoutés dans cette session) intégrés,
+  // et déclenche un téléchargement.
+  // ============================================================
+  function exportUpdatedFile() {
+    try {
+      const scriptEl = document.currentScript || document.querySelector('script');
+      const originalScriptText = scriptEl.textContent;
+
+      const newAlbumsBlock = 'const ALBUMS = ' + JSON.stringify(ALBUMS, null, 2) + ';';
+      const updatedScriptText = originalScriptText.replace(
+        /const ALBUMS = \{[\s\S]*?\n  \};/,
+        newAlbumsBlock
+      );
+
+      let fullHtml = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      fullHtml = fullHtml.replace(
+        /const ALBUMS = \{[\s\S]*?\n  \};/,
+        newAlbumsBlock
+      );
+
+      const blob = new Blob([fullHtml], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sticker-tracker.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("Le téléchargement automatique n'a pas fonctionné. Renvoie-moi ta liste et je l'ajouterai au fichier directement.");
+      console.error(e);
+    }
+  }
+})();
+</script>
+</body>
+</html>
